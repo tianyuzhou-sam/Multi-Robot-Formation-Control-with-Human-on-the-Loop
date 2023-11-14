@@ -85,11 +85,11 @@ class ModelPredictiveControl:
                 ipoptTimeTraj = np.append(ipoptTimeTraj, ipoptTime)
 
             if idx % 50 == 0:
-                print(print_str)
+                # print(print_str)
             if not successFlag:
                 if idx % 50 != 0:
-                    print(print_str)
-                print(returnStatus)
+                    # print(print_str)
+                # print(returnStatus)
                 logTimeTraj.append(timeNow)
                 logStrTraj.append(returnStatus)
 
@@ -104,7 +104,7 @@ class ModelPredictiveControl:
             #         target = self.targets[reached]
             #         self.MyOC = OptimalControlProblem(configDict, self.MyJackalSys, buildFlag, target)
 
-        print(print_str)
+        # print(print_str)
         result = {"timeTraj": timeTraj,
                   "xTraj": xTraj,
                   "uTraj": uTraj,

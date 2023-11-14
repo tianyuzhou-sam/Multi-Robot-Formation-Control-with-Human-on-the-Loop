@@ -34,7 +34,7 @@ class OptimalControlProblem:
 
 
         self.lin_vel_lb = 0.0
-        self.lin_vel_ub = 0.5
+        self.lin_vel_ub = 0.25
         self.ang_vel_lb = -0.5
         self.ang_vel_ub = 0.5
         self.lin_acc_lb = -0.1
