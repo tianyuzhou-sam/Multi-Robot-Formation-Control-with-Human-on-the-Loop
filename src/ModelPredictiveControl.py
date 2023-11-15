@@ -113,7 +113,7 @@ class ModelPredictiveControl:
                   "logTimeTraj": logTimeTraj,
                   "logStrTraj": logStrTraj}
 
-        if saveFlag:
+        if self.saveFlag:
             with open('controlData.csv', 'w') as file:
                 writer = csv.writer(file)
                 for item, value in result.items():
