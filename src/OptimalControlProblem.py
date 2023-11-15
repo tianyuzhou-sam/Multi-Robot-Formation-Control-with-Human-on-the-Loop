@@ -12,10 +12,9 @@ from JackalSys import JackalSys
 class OptimalControlProblem:
     configDict: dict  # a dictionary for parameters
 
-    def __init__(self, configDict: dict, MyJackalSys: JackalSys, buildFlag=True, target=[0,0]):
+    def __init__(self, configDict: dict, MyJackalSys: JackalSys, buildFlag=True):
         self.configDict = configDict
         self.MyJackalSys = MyJackalSys
-        self.target = target
         self.prefixBuild = "build/"
         self.strSolver = "nlp_uniform"
         self.strLib = "lib_oc_uniform"
@@ -34,7 +33,7 @@ class OptimalControlProblem:
 
 
         self.lin_vel_lb = 0.0
-        self.lin_vel_ub = 0.25
+        self.lin_vel_ub = 0.5
         self.ang_vel_lb = -0.5
         self.ang_vel_ub = 0.5
         self.lin_acc_lb = -0.1
@@ -43,7 +42,8 @@ class OptimalControlProblem:
         self.ang_acc_ub = 0.1
 
         # casadi nlp options
-        self.optsIpopt = {"print_level": 5, "sb": "yes"}
+        # self.optsIpopt = {"print_level": 5, "sb": "yes"}
+        self.optsIpopt = {"print_level": 1, "sb": "yes"}
         self.optsCasadi = {"print_time": False, "ipopt": self.optsIpopt}
 
         assert(self.MyJackalSys.dt == self.configDict["dt"])
@@ -89,7 +89,7 @@ class OptimalControlProblem:
             print("No setting for computing starting point. Set to zeroInput by default.")
             self.computeStartingPoint = lambda iniState: self._computeStartingPoint(iniState)
 
-    def solve(self, iniState: np.array, timeNow=0.0):
+    def solve(self, iniState: np.array, timeNow=0.0, target=[0,0]):
         """
         Solve one instance of optimal control.
 
@@ -111,7 +111,7 @@ class OptimalControlProblem:
         # compute initial point for all decision variables given the initial state with zero inputs
         decisionIni = self.computeStartingPoint(iniState)
         # revise arguments for the solver
-        self.args["p"] = ca.DM(iniState)
+        self.args["p"] = ca.DM(np.hstack((iniState, target)))
         self.args["x0"] = ca.DM(decisionIni)
 
         # solve
@@ -143,10 +143,11 @@ class OptimalControlProblem:
         decisionAllSym = ca.SX.sym("z", self.dimDecision)
 
         # symbolic variable for initial state, will be a parameter of NLP
-        iniStateSym = ca.SX.sym("x0", self.dimStates)
+        parameter = ca.SX.sym("x0", self.dimStates + 2)
+        iniStateSym = parameter[0:self.dimStates]
 
         # create cost function
-        _costFun = self._costFun(decisionAllSym, iniStateSym)
+        _costFun = self._costFun(decisionAllSym, parameter)
 
         # create constraints
         _cstrFun = ca.SX.zeros(self.dimConstraint)
@@ -154,7 +155,7 @@ class OptimalControlProblem:
         _cstrFun[self.stepNumHorizon * self.dimStates : self.dimConstraint] = self._otherCstrFun(decisionAllSym, iniStateSym)
 
         # create an NLP problem structure
-        nlp = {"x": decisionAllSym, "f": _costFun, "g": _cstrFun, "p": iniStateSym}
+        nlp = {"x": decisionAllSym, "f": _costFun, "g": _cstrFun, "p": parameter}
 
         # create an NLP solver instance
         solver = ca.nlpsol("solver", "ipopt", nlp)
@@ -240,7 +241,7 @@ class OptimalControlProblem:
                 xNow = iniState
             else:
                 xNow = xAll[self.dimStates*(idx-1) : self.dimStates*idx]
-            cost += self.w1 * ((xNow[0] - self.target[0]) **2 + (xNow[1] - self.target[1]) **2)
+            cost += self.w1 * ((xNow[0] - iniState[self.dimStates]) **2 + (xNow[1] - iniState[self.dimStates+1]) **2)
 
         return cost
 
@@ -279,8 +280,8 @@ class OptimalControlProblem:
 
         for idx in range(self.stepNumHorizon-1):
             uNow = uAll[self.dimInputs*(idx+1) : self.dimInputs*(idx+2)]
-            fun[2*idx] = (uNow[0] - uPrev[0])/self.dt
-            fun[2*idx+1] = (uNow[1] - uPrev[1])/self.dt
+            fun[2*idx] = self.MyJackalSys._linearAccFun(uPrev, uNow)
+            fun[2*idx+1] = self.MyJackalSys._angularAccFun(uPrev, uNow)
             uPrev = uNow
 
         fun_total = fun
@@ -340,15 +341,14 @@ if __name__ == '__main__':
     target = [5, 5]
 
     # initialize OptimalControlProblem
-    MyOC = OptimalControlProblem(configDict, MyJackal, buildFlag, target)
+    MyOC = OptimalControlProblem(configDict, MyJackal, buildFlag)
 
     # test
     x0 = np.array([0, 0, 0])
     u0 = np.array([0, 0])
     decisionAll = MyOC._computeStartingPoint(x0)
-    print(decisionAll)
 
     # solve
-    xTraj, uTraj, timeTraj, ipoptTime, returnStatus, successFlag = MyOC.solve(x0, timeNow=0.0)
+    xTraj, uTraj, timeTraj, ipoptTime, returnStatus, successFlag = MyOC.solve(x0, timeNow=0.0, target=target)
     print(xTraj)
     print(uTraj)

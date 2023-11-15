@@ -36,9 +36,16 @@ class JackalSys:
 
         _discDyn = states + self.dt * _contDyn
 
+        # Acceleration function
+        prevInputs = ca.SX.sym("uPrev", self.dimInputs)
+        _linearAcc = (inputs[0]-prevInputs[0]) / self.dt
+        _angularAcc = (inputs[1]-prevInputs[1]) / self.dt
+
         # in casadi.Function
         self._contDynFun = ca.Function("contDynFun", [states, inputs], [_contDyn])
         self._discDynFun = ca.Function("discDynFun", [states, inputs], [_discDyn])
+        self._linearAccFun = ca.Function("linearAccFun", [prevInputs, inputs], [_linearAcc])
+        self._angularAccFun = ca.Function("angularAccFun", [prevInputs, inputs], [_angularAcc])
 
         # build casadi Function if True
         if buildFlag:

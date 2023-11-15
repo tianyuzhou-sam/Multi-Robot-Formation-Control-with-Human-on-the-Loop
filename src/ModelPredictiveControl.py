@@ -3,6 +3,7 @@ import time
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
 from JackalSys import JackalSys
 from OptimalControlProblem import OptimalControlProblem
 
@@ -10,15 +11,16 @@ from OptimalControlProblem import OptimalControlProblem
 class ModelPredictiveControl:
     configDict: dict  # a dictionary for parameters
 
-    def __init__(self, configDict: dict, buildFlag=True):
+    def __init__(self, configDict: dict, buildFlag=True, targets=[[0,0]], saveFlag=False):
         self.configDict = configDict
+        self.saveFlag = saveFlag
 
         # initialize JackalSys
         self.MyJackalSys = JackalSys(configDict, buildFlag)
-        self.targets = [[5,5], [10,5], [10,10]]
-        target = self.targets[0]
+        self.targets = targets
+
         # initialize OptimalControlProblem
-        self.MyOC = OptimalControlProblem(configDict, self.MyJackalSys, buildFlag, target)
+        self.MyOC = OptimalControlProblem(configDict, self.MyJackalSys, buildFlag)
         
         # method
         try:
@@ -27,17 +29,16 @@ class ModelPredictiveControl:
         except:
             print("No setting for method. Set MPC by default")
             self.methodStr = "MPC"
-
-        
+  
         self.numTargets = len(self.targets)
         self.offset = 0.1
 
 
-    def run(self, iniState: np.array, iniInput: np.array, timeTotal: float):
+    def run(self, iniState: np.array, timeTotal: float):
         timeNow = 0.0  # [sec]
         stateNow = copy.deepcopy(iniState)
-        inputNow = copy.deepcopy(iniInput)
         idx = 0
+        target = self.targets[0]
 
         # initialize trajectories for states, inputs, etc.
         timeTraj = np.array([timeNow], dtype=np.float64)
@@ -58,16 +59,16 @@ class ModelPredictiveControl:
         # self.MyOC = OptimalControlProblem(configDict, self.MyJackalSys, buildFlag, target)
         # load function to run optimization once
         if self.methodStr == "MPC":
-            self.runOnce = lambda stateNow, timeNow: self._runOC(stateNow, timeNow)
+            self.runOnce = lambda stateNow, timeNow, target: self._runOC(stateNow, timeNow, target)
         else:
             raise Exception("Wrong method in configDict!")
 
         reached = 0
 
-        while (timeNow <= timeTotal-self.MyOC.dt) and (reached < self.numTargets):
+        while (timeNow <= timeTotal-self.MyOC.dt):
 
             # solve
-            ipoptTime, returnStatus, successFlag, algoTime, print_str, uNow = self.runOnce(stateNow, timeNow)
+            ipoptTime, returnStatus, successFlag, algoTime, print_str, uNow = self.runOnce(stateNow, timeNow, target)
 
             # apply control and forward propagate dynamics
             xNext = self.MyJackalSys.discDynFun(stateNow, uNow)
@@ -85,11 +86,11 @@ class ModelPredictiveControl:
                 ipoptTimeTraj = np.append(ipoptTimeTraj, ipoptTime)
 
             if idx % 50 == 0:
-                # print(print_str)
+                print(print_str)
             if not successFlag:
                 if idx % 50 != 0:
-                    # print(print_str)
-                # print(returnStatus)
+                    print(print_str)
+                print(returnStatus)
                 logTimeTraj.append(timeNow)
                 logStrTraj.append(returnStatus)
 
@@ -98,13 +99,13 @@ class ModelPredictiveControl:
             idx += 1
             timeTraj = np.append(timeTraj, timeNow)
 
-            # if ((stateNow[0]-self.targets[reached][0])**2+(stateNow[1]-self.targets[reached][1])**2 <= self.offset**2):
-            #     reached += 1
-            #     if reached < self.numTargets:
-            #         target = self.targets[reached]
-            #         self.MyOC = OptimalControlProblem(configDict, self.MyJackalSys, buildFlag, target)
+            if (reached < self.numTargets):
+                if ((stateNow[0] - self.targets[reached][0])**2 + (stateNow[1] - self.targets[reached][1])**2 <= self.offset**2):
+                    reached += 1
+                    if reached < self.numTargets:
+                        target = self.targets[reached]
 
-        # print(print_str)
+        print(print_str)
         result = {"timeTraj": timeTraj,
                   "xTraj": xTraj,
                   "uTraj": uTraj,
@@ -112,11 +113,17 @@ class ModelPredictiveControl:
                   "logTimeTraj": logTimeTraj,
                   "logStrTraj": logStrTraj}
 
+        if saveFlag:
+            with open('controlData.csv', 'w') as file:
+                writer = csv.writer(file)
+                for item, value in result.items():
+                    writer.writerow([item, value])
+
         return result
 
-    def _runOC(self, stateNow, timeNow):
+    def _runOC(self, stateNow, timeNow, target):
         t0 = time.time()
-        xTrajNow, uTrajNow, timeTrajNow, ipoptTime, returnStatus, successFlag = self.MyOC.solve(stateNow, timeNow)
+        xTrajNow, uTrajNow, timeTrajNow, ipoptTime, returnStatus, successFlag = self.MyOC.solve(stateNow, timeNow, target)
         t1 = time.time()
         algoTime = t1 - t0
         print_str = "Sim time [sec]: " + str(round(timeNow, 1)) + "   Comp. time [sec]: " + str(round(algoTime, 3))
@@ -140,18 +147,15 @@ class ModelPredictiveControl:
             uTraj = uTraj[0, 0]
 
         # trajectories for states
-        fig1, ax1 = plt.subplots(2, 1)
+        fig1, ax1 = plt.subplots()
         if titleFlag:
             fig1.suptitle("State Trajectory")
-        ax1[0].plot(xTraj[:,0], xTraj[:,1], color="blue", linewidth=2)
-
-        ax1[0].set_xlabel("x [m]")
-        ax1[0].set_ylabel("y [m]")
-
-        ax1[1].plot(timeTraj, xTraj[:,0], color="blue", linewidth=2)
-        ax1[1].plot(timeTraj, xTraj[:,1], color="red", linewidth=2)
-        ax1[1].set_xlabel("time [sec]")
-        ax1[1].set_ylabel("x,y [m]")
+        ax1.plot(xTraj[:,0], xTraj[:,1], color="blue", linewidth=2)
+        for idx in range(len(self.targets)):
+            ax1.plot(self.targets[idx][0], self.targets[idx][1], 'kX')
+        ax1.plot(self.targets[-1][0], self.targets[-1][1], 'r*', markersize=10)
+        ax1.set_xlabel("x [m]")
+        ax1.set_ylabel("y [m]")
 
         # trajectories for inputs
         fig2, ax2 = plt.subplots(2, 1)
@@ -189,14 +193,22 @@ if __name__ == '__main__':
     configDict = {"dt": 0.1, "stepNumHorizon": 10, "startPointMethod": "zeroInput"}
 
     buildFlag = True
-    # buildFlag = False
+    saveFlag = False
 
     x0 = np.array([0, 0, 0])
     u0 = np.array([0, 0])
-    T = 20
+    targets = [[5,5], [10,5], [10,10]]
+    T = 45
 
     # initialize MPC
-    MyMPC = ModelPredictiveControl(configDict, buildFlag)
-    result = MyMPC.run(x0, u0, T)
+    MyMPC = ModelPredictiveControl(configDict, buildFlag, targets, saveFlag)
+    result = MyMPC.run(x0, T)
     print(result)
     MyMPC.visualize(result)
+
+    # with open('controlData.csv') as csv_file:
+    #     reader = csv.reader(csv_file)
+    #     mydict = dict(reader)
+
+    # print(mydict)
+    # print(mydict["xTraj"])
