@@ -6,6 +6,7 @@ import copy
 import time
 import casadi as ca
 import numpy as np
+import math
 from JackalSys import JackalSys
 
 
@@ -19,18 +20,14 @@ class OptimalControlProblem:
         self.strSolver = "nlp_uniform"
         self.strLib = "lib_oc_uniform"
 
-
         self.w1 = 1.0
-        self.w2 = 0.1
-        self.w3 = 0.1
+        self.w2 = 1.0
 
         try:
             self.w1 = float(self.configDict["weights"][0])
             self.w2 = float(self.configDict["weights"][1])
-            self.w3 = float(self.configDict["weights"][2])
         except:
-            print("No setting for weights. Set w1 - w3 by default.")
-
+            print("No setting for weights. Set weights by default.")
 
         self.lin_vel_lb = 0.0
         self.lin_vel_ub = 0.5
@@ -230,7 +227,7 @@ class OptimalControlProblem:
         self.args = {"lbx": self.decisionLb, "ubx": self.decisionUb, "lbg": self.cstrLb, "ubg": self.cstrUb, "x0": decisionIni, "p": x0}
 
 
-    def _costFun(self, decisionAll, iniState):
+    def _costFun(self, decisionAll, parameter):
         xAll = decisionAll[0 : self.dimStates * self.stepNumHorizon]
         uAll = decisionAll[self.dimStates * self.stepNumHorizon : self.dimDecision]
         cost = 0.0
@@ -238,10 +235,12 @@ class OptimalControlProblem:
         # for soc
         for idx in range(self.stepNumHorizon):
             if idx == 0:
-                xNow = iniState
+                xNow = parameter[0:self.dimStates]
+                target = parameter[self.dimStates:self.dimStates+2]
             else:
                 xNow = xAll[self.dimStates*(idx-1) : self.dimStates*idx]
-            cost += self.w1 * ((xNow[0] - iniState[self.dimStates]) **2 + (xNow[1] - iniState[self.dimStates+1]) **2)
+            cost += self.w1 * ((xNow[0] - target[0]) **2 + (xNow[1] - target[1]) **2)
+            # cost += self.w2 * (math.atan2((target[1] - xNow[1]),(target[0] - xNow[0])) - xNow[2]) ** 2
 
         return cost
 

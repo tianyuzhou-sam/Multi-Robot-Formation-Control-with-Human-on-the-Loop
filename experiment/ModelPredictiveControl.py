@@ -2,6 +2,7 @@
 import time
 import copy
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 import os
 import sys
@@ -55,8 +56,8 @@ class ModelPredictiveControl:
         self.IP_server = self.config_data["QUALISYS"]["IP_MOCAP_SERVER"]
 
 
-        # rospy.init_node('move_robot_node', anonymous=False)
-        # self.pub_move = rospy.Publisher("/cmd_vel", Twist, queue_size=100)
+        rospy.init_node('move_robot_node', anonymous=False)
+        self.pub_move = rospy.Publisher("/cmd_vel", Twist, queue_size=100)
 
     def create_body_index(self, xml_string):
         """ Extract a name to index dictionary from 6-DOF settings xml """
@@ -97,6 +98,7 @@ class ModelPredictiveControl:
         self.stateNow = copy.deepcopy(iniState)
         self.idx = 0
         self.target = self.targets[0]
+        self.reached = 0
 
         # initialize trajectories for states, inputs, etc.
         self.timeTraj = np.array([self.timeNow], dtype=np.float64)
@@ -151,20 +153,23 @@ class ModelPredictiveControl:
 
             roll_now, pitch_now, yaw_now = transforms3d.euler.quat2euler(quat, axes='sxyz')
             yaw_now = -yaw_now
+
+            xy = [position.x/1000.0, position.y/1000.0]
             
             # print(position)
             # print("yaw")
             # print(yaw_now)
             # print(math.degrees(yaw_now))
-
-            if ((position[0] - self.target[0])**2 + (position[1] - self.target[1])**2 >= self.offset**2):
+            # print((xy[0] - self.target[0])**2 + (xy[1] - self.target[1])**2)
+            if (self.reached < self.numTargets):
                 
                 # solve
+                # print(self.target)
                 ipoptTime, returnStatus, successFlag, algoTime, print_str, uNow = self.runOnce(self.stateNow, self.timeNow, self.target)
 
                 # apply control and forward propagate dynamics
                 # xNext = self.MyJackalSys.discDynFun(self.stateNow, uNow)
-                xNext = [position[0], position[1], yaw_now]
+                xNext = [xy[0], xy[1], yaw_now]
 
                 # update trajectory
                 self.stateNow = np.array(xNext).reshape((1,-1)).flatten()
@@ -179,11 +184,12 @@ class ModelPredictiveControl:
                     self.ipoptTimeTraj = np.append(self.ipoptTimeTraj, ipoptTime)
 
                 if self.idx % 50 == 0:
-                    print(print_str)
+                    # print(print_str)
+                    pass
                 if not successFlag:
-                    if self.idx % 50 != 0:
-                        print(print_str)
-                    print(returnStatus)
+                    # if self.idx % 50 != 0:
+                        # print(print_str)
+                    # print(returnStatus)
                     self.logTimeTraj.append(self.timeNow)
                     self.logStrTraj.append(returnStatus)
 
@@ -192,11 +198,14 @@ class ModelPredictiveControl:
                 self.idx += 1
                 self.timeTraj = np.append(self.timeTraj, self.timeNow)
 
-                # if ((stateNow[0]-self.targets[reached][0])**2+(stateNow[1]-self.targets[reached][1])**2 <= self.offset**2):
-                #     reached += 1
-                #     if reached < self.numTargets:
-                #         target = self.targets[reached]
-                #         self.MyOC = OptimalControlProblem(configDict, self.MyJackalSys, buildFlag, target)
+
+                if ((self.stateNow[0]-self.targets[self.reached][0])**2+(self.stateNow[1]-self.targets[self.reached][1])**2 <= self.offset**2):
+                    self.reached += 1
+                    print("reached target")
+                    print(self.reached)
+                    print(self.target)
+                    if self.reached < self.numTargets:
+                        self.target = self.targets[self.reached]
 
                 # print(print_str)
                 
@@ -301,7 +310,7 @@ class ModelPredictiveControl:
 if __name__ == '__main__':
     # dictionary for configuration
     # dt for Euler integration
-    configDict = {"dt": 0.1, "stepNumHorizon": 10, "startPointMethod": "zeroInput"}
+    configDict = {"dt": 0.1, "stepNumHorizon": 5, "startPointMethod": "zeroInput"}
     config_file_name = 'config/config_jackal.json'
 
     buildFlag = True
@@ -312,7 +321,7 @@ if __name__ == '__main__':
     x0 = np.array([0, 0, 0])
     u0 = np.array([0, 0])
     T = 20
-    targets = [[0,0], [10,5], [10,10]]
+    targets = [[-0.,0.], [1,-0.5], [2,0]]
 
     # initialize MPC
     MyMPC = ModelPredictiveControl(configDict, buildFlag, targets, saveFlag, config_file_name)
