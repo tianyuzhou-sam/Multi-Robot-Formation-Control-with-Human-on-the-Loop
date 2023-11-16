@@ -2,7 +2,7 @@
 import asyncio
 import os
 import sys
-sys.path.append(os.getcwd()+'/experiment/lib')
+sys.path.append(os.getcwd()+'/experiment/src')
 from Formation import FormationPlanner
 
 if __name__ == "__main__":
