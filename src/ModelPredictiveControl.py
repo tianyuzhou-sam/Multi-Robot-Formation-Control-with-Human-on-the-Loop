@@ -116,8 +116,11 @@ class ModelPredictiveControl:
         if self.saveFlag:
             with open('controlData.csv', 'w') as file:
                 writer = csv.writer(file)
-                for item, value in result.items():
-                    writer.writerow([item, value])
+                writer.writerow(timeTraj)
+                for idx in range(self.MyJackalSys.dimStates):
+                    writer.writerow(xTraj.T[idx])
+                for idx in range(self.MyJackalSys.dimInputs):
+                    writer.writerow(uTraj.T[idx])
 
         return result
 
@@ -198,17 +201,38 @@ if __name__ == '__main__':
     x0 = np.array([0, 0, 0])
     u0 = np.array([0, 0])
     targets = [[5,5], [10,5], [10,10]]
-    T = 45
+    T = 10
 
-    # initialize MPC
-    MyMPC = ModelPredictiveControl(configDict, buildFlag, targets, saveFlag)
-    result = MyMPC.run(x0, T)
-    print(result)
-    MyMPC.visualize(result)
+    # # initialize MPC
+    # MyMPC = ModelPredictiveControl(configDict, buildFlag, targets, saveFlag)
+    # result = MyMPC.run(x0, T)
+    # print(result)
+    # MyMPC.visualize(result)
 
-    # with open('controlData.csv') as csv_file:
-    #     reader = csv.reader(csv_file)
-    #     mydict = dict(reader)
+    with open('controlData.csv') as csv_file:
+        reader = csv.reader(csv_file)
+        idx = 0
+        for row in reader:
+            if idx == 0:
+                timeTraj = row
+            elif idx <= 3:
+                if idx == 1:
+                    xTraj = row
+                else:
+                    xTraj = np.vstack((xTraj, row))
+            else:
+                if idx == 4:
+                    uTraj = row
+                else:
+                    uTraj = np.vstack((uTraj, row))
+            idx += 1
 
-    # print(mydict)
-    # print(mydict["xTraj"])
+    print(xTraj[0])
+
+    # # trajectories for states
+    # fig1, ax1 = plt.subplots()
+    # fig1.suptitle("Trajectory")
+    # ax1.plot(xTraj[0], xTraj[1], color="blue", linewidth=2)
+    # ax1.set_xlabel("x [m]")
+    # ax1.set_ylabel("y [m]")
+    # plt.show()

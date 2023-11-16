@@ -29,10 +29,10 @@ class OptimalControlProblem:
         except:
             print("No setting for weights. Set weights by default.")
 
-        self.lin_vel_lb = 0.0
-        self.lin_vel_ub = 0.5
-        self.ang_vel_lb = -0.5
-        self.ang_vel_ub = 0.5
+        self.lin_vel_lb = 0
+        self.lin_vel_ub = 0.25
+        self.ang_vel_lb = -1.57
+        self.ang_vel_ub = 1.57
         self.lin_acc_lb = -0.1
         self.lin_acc_ub = 0.1
         self.ang_acc_lb = -0.1 

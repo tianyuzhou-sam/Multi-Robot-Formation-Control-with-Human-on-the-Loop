@@ -161,10 +161,8 @@ class ModelPredictiveControl:
             # print(yaw_now)
             # print(math.degrees(yaw_now))
             # print((xy[0] - self.target[0])**2 + (xy[1] - self.target[1])**2)
-            if (self.reached < self.numTargets):
-                
+            if (self.reached < self.numTargets):               
                 # solve
-                # print(self.target)
                 ipoptTime, returnStatus, successFlag, algoTime, print_str, uNow = self.runOnce(self.stateNow, self.timeNow, self.target)
 
                 # apply control and forward propagate dynamics
@@ -229,8 +227,14 @@ class ModelPredictiveControl:
                 if self.saveFlag:
                     with open('controlData.csv', 'w') as file:
                         writer = csv.writer(file)
-                        for item, value in result.items():
-                            writer.writerow([item, value])
+                        print(timeTraj)
+                        writer.writerow(timeTraj)
+                        print(self.MyJackalSys.dimStates)
+                        for idx in range(self.MyJackalSys.dimStates):
+                            writer.writerow(xTraj.T[idx])
+                        for idx in range(self.MyJackalSys.dimInputs):
+                            writer.writerow(uTraj.T[idx])
+
                 raise Exception("Done")
 
         # Start streaming frames
