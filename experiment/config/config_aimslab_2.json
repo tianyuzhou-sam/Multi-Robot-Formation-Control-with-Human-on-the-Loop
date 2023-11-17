@@ -2,7 +2,7 @@
     "QUALISYS": {
         "IP_MOCAP_SERVER": "192.168.1.122",
         "IP_STATES_ESTIMATION": "127.0.0.1",
-        "PORT_STATES_ESTIMATION": "9100",
+        "PORT_STATES_ESTIMATION": "9101",
         "DATA_NUMBERS_STATES_ESTIMATION": "13",
         "DATA_BYTES_MAX": "6656",
         "NAME_SINGLE_BODY": "mambo_02",
@@ -15,7 +15,7 @@
     },
 
     "MAMBO": {
-        "BLUETOOTH_ADDRESS": "D0:3A:30:60:E6:24",
+        "BLUETOOTH_ADDRESS": "D0:3A:9D:33:E6:5A",
         "TILT_MAX": "25.0",
         "VERTICAL_SPEED_MAX": "2.0",
         "YAW_RATE_MAX": "3.14"

@@ -212,7 +212,6 @@ class ModelPredictiveControl:
                 move.angular.z = uNow[1]
                 self.pub_move.publish(move) 
                 
-
                 # time.sleep(self.dt)  
             
             else:
@@ -227,13 +226,13 @@ class ModelPredictiveControl:
                 if self.saveFlag:
                     with open('controlData.csv', 'w') as file:
                         writer = csv.writer(file)
-                        print(timeTraj)
-                        writer.writerow(timeTraj)
+                        print(self.timeTraj)
+                        writer.writerow(self.timeTraj)
                         print(self.MyJackalSys.dimStates)
                         for idx in range(self.MyJackalSys.dimStates):
-                            writer.writerow(xTraj.T[idx])
+                            writer.writerow(self.xTraj.T[idx])
                         for idx in range(self.MyJackalSys.dimInputs):
-                            writer.writerow(uTraj.T[idx])
+                            writer.writerow(self.uTraj.T[idx])
 
                 raise Exception("Done")
 

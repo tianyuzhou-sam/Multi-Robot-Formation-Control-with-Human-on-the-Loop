@@ -46,7 +46,7 @@ N_agent = 3
 
 hover = 0
 l = 1                        # length of explore window, should be greater than xn^2, timestep dT
-fly_time = 1800                 # length of fly window, timestep dT
+fly_time = 10                 # length of fly window, timestep dT
 iter_max = 50                   # max iteration to compute
 dT = 0.01                       # timestep
 
@@ -139,21 +139,6 @@ for idx in range(single_xn):
 A0 = np.matmul(np.matmul(T, A), inv(T))
 B0 = np.matmul(T, B)
 
-eig, v = np.linalg.eig(A0)
-
-################ Initial K ###############################################
-K = np.array([[-1,0,-1,0,1,0,1,0],[0,-1,0,-1,0,1,0,1],[1,0,1,0,1,0,1,0],[0,1,0,1,0,1,0,1]])
-K = np.array([[-0.8,0,-1,0,-0.8,0,-1,0,0.25,0,1,0],
-              [0,-0.8,0,-1,0,-0.8,0,-1,0,0.25,0,1],
-              [1,0,1.5,0,-0.3,0,-0.5,0,0.25,0,1,0],
-              [0,1,0,1.5,0,-0.3,0,-0.5,0,0.25,0,1],
-              [-0.3,0,-0.5,0,1,0,1.5,0,0.25,0,1,0],
-              [0,-0.3,0,-0.5,0,1,0,1.5,0,0.25,0,1]])
-###########################################################################
-
-K = np.zeros((un,xn))
-eig2, v2 = np.linalg.eig(A0-np.matmul(B0,K))
-
 u = np.zeros((un, 1))
 
 X_save = np.transpose(x0)
@@ -188,12 +173,14 @@ for idx in range(fly_time):
     # u = -np.matmul(K, X)
     u = -np.matmul(K0, X)
     dx = np.matmul(A, x) + np.matmul(B, u)
+    print(dx)
     new_v = np.zeros((2*N_agent,1))
     for idx in range(N_agent):
         new_v[idx*2] = dx[idx*4]
         new_v[idx*2+1] = dx[idx*4+1]
 
     v_save = np.hstack((v_save, new_v))
+
     x = x + dx*dT
     t_save = np.hstack((t_save, t_save[-1]+dT))
     X_save = np.vstack((X_save, np.transpose(x)))

@@ -44,5 +44,5 @@
     "FLAG_DELETE_CSV_BEGIN": 0,
     "FLAG_PLOT": 1,
     "DIRECTORY_SYSID": "/sysid_data/",
-    "DIRECTORY_TRAJ": "/scripts/traj_csv_files/"
+    "DIRECTORY_TRAJ": "/scripts_aimslab/traj_csv_files/jackal/"
 }

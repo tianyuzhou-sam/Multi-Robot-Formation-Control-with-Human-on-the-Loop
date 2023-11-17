@@ -15,7 +15,7 @@ if __name__ == '__main__':
     buildFlag = True
     saveFlag = False
 
-    x0 = np.array([-2.3, -0.9, 0])
+    x0 = np.array([-1.5, 0, 0])
     u0 = np.array([0, 0])
     T = 60
     targets = [[-0.5,0.25], [1,-1], [2.2,-0.15], [2.2, 0.15], [-1.5,0]]
