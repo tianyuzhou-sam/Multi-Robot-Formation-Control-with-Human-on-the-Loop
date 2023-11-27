@@ -193,6 +193,7 @@ class FormationPlanner:
         X = z - desire_state
         u = -np.matmul(K, X)
         dx = np.matmul(A, x) + np.matmul(B, u)
+        print(dx)
 
         x = x + dx*self.dt
 
