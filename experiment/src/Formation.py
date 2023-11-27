@@ -74,35 +74,59 @@ class FormationPlanner:
 
         # flying time
         fly_time = 100
-        # formation
-        self.distance = formation
 
-        A_single = np.array([[0,0,1,0], 
-                             [0,0,0,1],
-                             [0,0,-1/10,0],
-                             [0,0,0,-1/10]])
 
-        B_single = np.array([[0,0],
-                             [0,0],
-                             [1,0],
-                             [0,1]])
+        self.g = 9.81
+        self.m = 0.2
+        self.Ix = 8.1 * 1e-3
+        self.Iy = 8.1 * 1e-3
+        self.Iz = 14.2 * 1e-3
+        self.A = np.array([[0,0,0,1,0,0,0,0,0,0,0,0],
+                           [0,0,0,0,1,0,0,0,0,0,0,0],
+                           [0,0,0,0,0,1,0,0,0,0,0,0],
+                           [0,0,0,0,0,0,0,self.g,0,0,0,0],
+                           [0,0,0,0,0,0,-self.g,0,0,0,0,0],
+                           [0,0,0,0,0,0,0,0,0,0,0,0],
+                           [0,0,0,0,0,0,0,0,0,1,0,0],
+                           [0,0,0,0,0,0,0,0,0,0,1,0],
+                           [0,0,0,0,0,0,0,0,0,0,0,1],
+                           [0,0,0,0,0,0,0,0,0,0,0,0],
+                           [0,0,0,0,0,0,0,0,0,0,0,0],
+                           [0,0,0,0,0,0,0,0,0,0,0,0]])
+
+        self.B = np.array([[0,0,0,0],
+                           [0,0,0,0],
+                           [0,0,0,0],
+                           [0,0,0,0],
+                           [0,0,0,0],
+                           [1/self.m,0,0,0],
+                           [0,0,0,0],
+                           [0,0,0,0],
+                           [0,0,0,0],
+                           [0,1/self.Ix,0,0],
+                           [0,0,1/self.Iy,0],
+                           [0,0,0,1/self.Iz]])
         # dimension of group matrices
-        self.dim_xn_single = len(B_single)                          # single agent
-        self.dim_xn = self.dim_xn_single*self.num_agents                # number of rows
-        self.dim_un = len(B_single[0])*self.num_agents              # number of columns
+        self.dim_xn = len(B)                          # single agent
+        self.dim_un = len(B[0])                       # number of columns
+
+        self.z = np.zeros((self.num_agents, self.dim_xn))
+        for idx in range(self.num_agents):
+            self.z[idx][0] = desire[idx][0]
+            self.z[idx][1] = desire[idx][1]
+            self.z[idx][2] = desire[idx][2]
         
-        # set weight
-        Q = np.eye(self.dim_xn)*1
-        Q[(self.num_agents-1)*4][(self.num_agents-1)*4] = 1
-        Q[(self.num_agents-1)*4+1][(self.num_agents-1)*4+1] = 1
-        R = np.eye(self.dim_un)*0.1
 
-        # get froup matrices
-        A = self.fill_diagonal(self.num_agents, A_single)
-        B = self.fill_diagonal(self.num_agents, B_single)
+        self.Ad = np.eye(self.dim_xn) + self.dt*self.A
+        self.Bd = self.dt*self.B
 
-        # linear transformation
-        T = self.linear_transformation()
+        self.Q = np.eye(self.dim_xn)*10
+        self.R = np.eye(self.dim_un)*1
+        
+        
+        P = np.matrix(scipy.linalg.solve_discrete_are(self.Ad, self.Bd, self.Q, self.R))
+        self.K = np.matrix(np.matmul(scipy.linalg.inv(self.R + self.Bd.T*P*self.Bd),self.Bd.T)*P*self.Ad)
+
 
         # remove all the existing files in the trajectory directory
         for idx in range(self.num_agents):
@@ -146,13 +170,9 @@ class FormationPlanner:
         time_used = 0  # initialize the global time as 0
         quad_state_list = time.time() - time_begin
         for idx in range(self.num_agents):
-            quad_state_list = np.hstack((quad_state_list, agents_position_list[idx][0:2], self.height_fly, 0, 0, 0))
+            quad_state_list = np.hstack((quad_state_list, agents_position_list[idx][0:2], self.height_fly, 0, 0, 0, 0, 0, 0, 0, 0, 0))
         jackal_state_list = np.hstack((target_position[0], target_position[1]))
 
-        A0 = np.matmul(np.matmul(T, A), np.linalg.inv(T))
-        B0 = np.matmul(T, B)
-        X0 = np.matrix(scipy.linalg.solve_continuous_are(A0, B0, Q, R))
-        K = np.matrix(scipy.linalg.inv(R)*(B0.T*X0))
 
         time_start_fly = time.time()
         while(time_used < fly_time):
@@ -164,8 +184,10 @@ class FormationPlanner:
             # update target position
             target_position = await self.update_target_mocap()
 
+            # old jackal v
+
             # do formation
-            quad_state_list, jackal_state_list = self.formation(K, time_begin, agents_position_list, jackal_state_list, target_position, quad_state_list, A, B, T)
+            quad_state_list, jackal_state_list = self.formation(time_begin, agents_position_list, jackal_state_list, target_position, quad_state_list, A, B, T)
 
             # plt.pause(1E-9)
             time_sleep = max(0, self.dt - time.time() + t_start)
@@ -174,8 +196,9 @@ class FormationPlanner:
             await asyncio.sleep(time_sleep)
 
 
-    def formation(self, K, time_begin, agents_position_list, jackal_state_list, target_position, quad_state_list, A, B, T):
+    def formation(self, time_begin, agents_position_list, jackal_state_list, target_position, quad_state_list, A, B, T):
         old_v = np.zeros((2*self.num_agents,1))
+
         for idx in range(self.num_agents):
             if quad_state_list.size == self.num_agents*6+1:
                 old_v[idx*2] = quad_state_list[idx*6+4]
@@ -187,14 +210,22 @@ class FormationPlanner:
         x = np.vstack((x, old_v[0], old_v[1]))
         for idx in range(self.num_agents-1):
             x = np.vstack((x, agents_position_list[idx+1][0], agents_position_list[idx+1][1], old_v[(idx+1)*2], old_v[(idx+1)*2+1]))
-        desire_state = self.get_desire_state(target_position[:2])
-        
-        z = np.matmul(T, x)
-        X = z - desire_state
-        u = -np.matmul(K, X)
-        dx = np.matmul(A, x) + np.matmul(B, u)
+        # desire_state = self.get_desire_state(target_position[:2])
+        JackalObserved = [target_position[0], target_position[1], 0, uNow[0]*np.cos(self.x_Jackal[2]), uNow[0]*np.sin(self.x_Jackal[2]), 0, 0, 0, 0, 0, 0, 0]
 
-        x = x + dx*self.dt
+        for idx in range(self.num_agents):
+            u = -np.matmul(self.K, self.x_Quad[idx] - self.z[idx] - JackalObserved)
+            u = u.tolist()[0]
+
+            # new_v = np.vstack((dx[3:6], dx[9:12]))
+
+            # v_save = np.hstack((v_save, new_v))
+
+            u[0] = u[0] + self.m*self.g
+
+            newX = self.Quad._discDynFun(self.x_Quad[idx], u)
+
+            # x = x + dx*self.dt
 
         v = np.zeros((2*self.num_agents,1))
         for idx in range(self.num_agents):

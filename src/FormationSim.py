@@ -5,266 +5,218 @@ from numpy.linalg import inv
 from numpy import linalg as LA
 from scipy import integrate
 import scipy
+import control
 import matplotlib.pyplot as plt
 import csv
+import os
+import sys
+import time
+from JackalSys import JackalSys
+from OptimalControlJackal import OptimalControlJackal
+from QuadSys import QuadSys
 
-def mysys(t, X):
-    x = X[0]
-    
-    for i in range(xn-1):
-        x = np.vstack((x, X[i+1]))
+class FormationSim:
+    configDict: dict  # a dictionary for parameters
+    dimStates: int  # dimension of states
+    dimInputs: int  # dimension of inputs
 
-    for idx in range(N_agent):        
-        u[idx*2] = u[idx*2] + random()/1000000
-        u[idx*2+1] = u[idx*2+1] + random()/1000000
+    def __init__(self, configDict: dict, targets: [0,0], iniJackal: [0,0,0], iniQuad: [0,0,0], desire: [0,0,0], buildFlag=True, saveFlag=False):
+        self.num_agents = len(iniQuad)
+        self.stateTransform = np.array([[1,0,0,0,0,0,0,0,0,0,0,0],
+                                        [0,1,0,0,0,0,0,0,0,0,0,0],
+                                        [0,0,0,1,0,0,0,0,0,0,0,0],
+                                        [0,0,0,0,1,0,0,0,0,0,0,0]])
+        self.configDict = configDict
+        self.dt = configDict['dt']
+        self.MyJackalSys = JackalSys(configDict, buildFlag)
+        self.Jackal = OptimalControlJackal(configDict, self.MyJackalSys, buildFlag)
+
+        self.targets = targets
+        self.reached = 0
+        self.numTargets = len(targets)
+        self.offset = 0.1
+
+        self.g = 9.81
+        self.m = 0.2
+        self.Ix = 8.1 * 1e-3
+        self.Iy = 8.1 * 1e-3
+        self.Iz = 14.2 * 1e-3
+
+        self.Quad = QuadSys(configDict, self.g, self.m, self.Ix, self.Iy, self.Iz)
+
+        self.x_Jackal = iniJackal
+
+        self.x_Quad = np.zeros((self.num_agents, self.Quad.dimStates))
+        for idx in range(self.num_agents):
+            self.x_Quad[idx][0] = iniQuad[idx][0]
+            self.x_Quad[idx][1] = iniQuad[idx][1]
+            self.x_Quad[idx][2] = iniQuad[idx][2]
+
+        self.z = np.zeros((self.num_agents, self.Quad.dimStates))
+        for idx in range(self.num_agents):
+            self.z[idx][0] = desire[idx][0]
+            self.z[idx][1] = desire[idx][1]
+            self.z[idx][2] = desire[idx][2]
+
+
+        self.A = np.array([[0,0,0,1,0,0,0,0,0,0,0,0],
+                           [0,0,0,0,1,0,0,0,0,0,0,0],
+                           [0,0,0,0,0,1,0,0,0,0,0,0],
+                           [0,0,0,0,0,0,0,self.g,0,0,0,0],
+                           [0,0,0,0,0,0,-self.g,0,0,0,0,0],
+                           [0,0,0,0,0,0,0,0,0,0,0,0],
+                           [0,0,0,0,0,0,0,0,0,1,0,0],
+                           [0,0,0,0,0,0,0,0,0,0,1,0],
+                           [0,0,0,0,0,0,0,0,0,0,0,1],
+                           [0,0,0,0,0,0,0,0,0,0,0,0],
+                           [0,0,0,0,0,0,0,0,0,0,0,0],
+                           [0,0,0,0,0,0,0,0,0,0,0,0]])
+
+        self.B = np.array([[0,0,0,0],
+                           [0,0,0,0],
+                           [0,0,0,0],
+                           [0,0,0,0],
+                           [0,0,0,0],
+                           [1/self.m,0,0,0],
+                           [0,0,0,0],
+                           [0,0,0,0],
+                           [0,0,0,0],
+                           [0,1/self.Ix,0,0],
+                           [0,0,1/self.Iy,0],
+                           [0,0,0,1/self.Iz]])
+
+        self.Ad = np.eye(self.Quad.dimStates) + self.dt*self.A
+        self.Bd = self.dt*self.B
+
+        self.Q = np.eye(self.Quad.dimStates)*10
+        self.R = np.eye(self.Quad.dimInputs)*1
         
-    dx = np.matmul(A0, x) + np.matmul(B0, u)
-
-    dxx = np.kron(x, x)
-    dux = np.kron(x, u)
-    dX = np.array(dx)
-    dX = np.vstack((dX, dxx))
-    dX = np.vstack((dX, dux))
-
-    return np.transpose(dX)[0]
-
-def fill_diagonal(N_agent: int, D:np.array):
-    row = len(D)
-    col = len(D[0])
-    An = np.zeros((row*N_agent, col*N_agent))
-    for idx in range(N_agent):
-        for j in range(row):
-            for k in range(col):
-                An[idx*row+j][idx*col+k] = D[j][k]
-    return An
-
-##############################################################################################
-#### User Define ####
-
-save_file = 0
-N_agent = 3
-
-hover = 0
-l = 1                        # length of explore window, should be greater than xn^2, timestep dT
-fly_time = 10                 # length of fly window, timestep dT
-iter_max = 50                   # max iteration to compute
-dT = 0.01                       # timestep
-
-epsilon = 10e-3                 # stop threshold
-
-# x0 = np.array([[-1.5],[-0.5],[0],[0],
-#                [-1.5],[-1.5],[0],[0],
-#                [-1.5],[0.5],[0],[0]])
-
-x0 = np.array([[-1.5],[-0.5],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],
-               [-1.5],[-1.5],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],
-               [-1.5],[0.5],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]])
-
-target = np.array([[1.5],[0]])  # target
-distance = np.array([[-0.707],[-0.5],[-0.707],[0.5]])  # formation
+        
+        P = np.matrix(scipy.linalg.solve_discrete_are(self.Ad, self.Bd, self.Q, self.R))
+        self.K = np.matrix(np.matmul(scipy.linalg.inv(self.R + self.Bd.T*P*self.Bd),self.Bd.T)*P*self.Ad)
 
 
-g = 9.81
-m = 0.2
-Ixx = 0.1
-Iyy = 0.1
-Izz = 0.1
 
-A = np.array([[0,0,0,1,0,0,0,0,0,0,0,0],
-             [0,0,0,0,1,0,0,0,0,0,0,0],
-             [0,0,0,0,0,1,0,0,0,0,0,0],
-             [0,0,0,0,0,0,0,-g,0,0,0,0],
-             [0,0,0,0,0,0,g,0,0,0,0,0],
-             [0,0,0,0,0,0,0,0,0,0,0,0],
-             [0,0,0,0,0,0,0,0,0,1,0,0],
-             [0,0,0,0,0,0,0,0,0,0,1,0],
-             [0,0,0,0,0,0,0,0,0,0,0,1],
-             [0,0,0,0,0,0,0,0,0,0,0,0],
-             [0,0,0,0,0,0,0,0,0,0,0,0],
-             [0,0,0,0,0,0,0,0,0,0,0,0]])
-
-B = np.array([[0,0,0,0],
-             [0,0,0,0],
-             [0,0,0,0],
-             [0,0,0,0],
-             [0,0,0,0],
-             [1/m,0,0,0],
-             [0,0,0,0],
-             [0,0,0,0],
-             [0,0,0,0],
-             [0,1/Ixx,0,0],
-             [0,0,1/Iyy,0],
-             [0,0,0,1/Izz]])
-
-##############################################################################################
+    def run(self):
 
 
-n = len(A)*N_agent
-xn = len(B)*N_agent                     # number of rows
-un = len(B[0])*N_agent                  # number of columns
-single_xn = int(xn/N_agent)
+        u = np.zeros((self.Quad.dimInputs, 1))
 
-##### desire state #######
-desire = np.array([[-0.707],[-0.5],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],
-                   [-0.707],[0.5],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],
-                   [1.5],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]])
+        # X_save = np.transpose(x0)
 
-# desire = np.array([1],[2],[0],[0])
-# you may just define your desire state directly instead of using this loop
-#################
+        # X = x0
+        # X = np.vstack((X, np.transpose(np.kron(np.transpose(x0), np.transpose(x0)))))
+        # X = np.vstack((X, np.kron(x0, np.zeros((un, 1)))))
 
-############ Weight matrix #################
-Q = np.eye(xn)*1
-Q[(N_agent-1)*4][(N_agent-1)*4] = 0.1
-Q[(N_agent-1)*4+1][(N_agent-1)*4+1] = 0.1
-R = np.eye(un)*1
-##### just give as Q = something instead of using this loop
-############################################
+        timeNow = 0.0
+        timeTraj = np.array([timeNow], dtype=np.float64)
+        target = self.targets[0]
+        # v_save = np.zeros((6,1))
 
-An = fill_diagonal(N_agent, A)
-Bn = fill_diagonal(N_agent, B)
+        # X = np.transpose(X)[-1]
 
-A = An
-B = Bn
 
-T = np.zeros((xn, xn))
-for idx in range(N_agent-1):
-    for k in range(single_xn):
-        T[idx*single_xn+k][k] = -1
-        T[idx*single_xn+k][(idx+1)*single_xn+k] = 1
-for idx in range(single_xn):
-    for k in range(N_agent):
-        T[(N_agent-1)*single_xn+idx][k*single_xn+idx] = 1/N_agent
+        self.runOnce = lambda stateNow, timeNow, target: self._runOC(self.x_Jackal, timeNow, target)
+        # x = np.reshape(X_save[-1], (xn,1))
+        while (self.reached < self.numTargets):    
 
-A0 = np.matmul(np.matmul(T, A), inv(T))
-B0 = np.matmul(T, B)
+            # solve
+            ipoptTime, returnStatus, successFlag, algoTime, print_str, uNow = self.runOnce(self.x_Jackal, timeNow, target)
 
-u = np.zeros((un, 1))
+            JackalObserved = [self.x_Jackal[0], self.x_Jackal[1], 0, uNow[0]*np.cos(self.x_Jackal[2]), uNow[0]*np.sin(self.x_Jackal[2]), 0, 0, 0, 0, 0, 0, 0]
+            
+            # apply control and forward propagate dynamics
+            JackalStateNext = self.MyJackalSys.discDynFun(self.x_Jackal, uNow)
+            # update trajectory
+            self.x_Jackal = np.array(JackalStateNext).reshape((1,-1)).flatten()
 
-X_save = np.transpose(x0)
-x0 = np.matmul(T,x0)
-X = x0
-X = np.vstack((X, np.transpose(np.kron(np.transpose(x0), np.transpose(x0)))))
-X = np.vstack((X, np.kron(x0, np.zeros((un, 1)))))
 
-t_save = np.zeros(1)
-v_save = np.zeros((2*N_agent,1))
+            # update time
+            timeNow += self.dt
+            timeTraj = np.append(timeTraj, timeNow)
 
-for idx in range(hover):
-    X_save = np.vstack((X_save,X_save[-1]))
-    t_save = np.hstack((t_save, t_save[-1]+dT))
+            if (self.reached < self.numTargets):
+                if ((self.x_Jackal[0] - self.targets[self.reached][0])**2 + (self.x_Jackal[1] - self.targets[self.reached][1])**2 <= self.offset**2):
+                    self.reached += 1
+                    if self.reached < self.numTargets:
+                        target = self.targets[self.reached]
 
-X = np.transpose(X)[-1]
+            for idx in range(self.num_agents):
+                u = -np.matmul(self.K, self.x_Quad[idx] - self.z[idx] - JackalObserved)
+                u = u.tolist()[0]
 
-X0 = np.matrix(scipy.linalg.solve_continuous_are(A0, B0, Q, R))
-K0 = np.matrix(scipy.linalg.inv(R)*(B0.T*X0))
+                # new_v = np.vstack((dx[3:6], dx[9:12]))
 
-print("Optimal K")
-print(K0)
+                # v_save = np.hstack((v_save, new_v))
 
-#### Formation ##########
-x = np.reshape(X_save[-1], (xn,1))
-for idx in range(fly_time):
-    z = np.matmul(T, x)
-    # if idx > 1000:
-    #     desire[24] = desire[24]+0.01
-    #     desire[25] = desire[25]-0.02
-    X = z - desire
-    # u = -np.matmul(K, X)
-    u = -np.matmul(K0, X)
-    dx = np.matmul(A, x) + np.matmul(B, u)
-    print(dx)
-    new_v = np.zeros((2*N_agent,1))
-    for idx in range(N_agent):
-        new_v[idx*2] = dx[idx*4]
-        new_v[idx*2+1] = dx[idx*4+1]
+                u[0] = u[0] + self.m*self.g
 
-    v_save = np.hstack((v_save, new_v))
+                newX = self.Quad._discDynFun(self.x_Quad[idx], u)
+                for jdx in range(self.Quad.dimStates):
+                    self.x_Quad[idx][jdx] = newX[jdx]
 
-    x = x + dx*dT
-    t_save = np.hstack((t_save, t_save[-1]+dT))
-    X_save = np.vstack((X_save, np.transpose(x)))
+                # t_save = np.hstack((t_save, t_save[-1]+dt))
+                # X_save = np.vstack((X_save, np.transpose(x)))
 
-fig, ax = plt.subplots()
-ax.set_xlabel('x (m)')
-ax.set_ylabel('y (m)')
-ax.set_title('Formation')
-fig_legend = ['Target']
+            fig1, ax1 = plt.subplots()
+            ax1.plot(self.x_Jackal[0], self.x_Jackal[1], marker = 'o')
+            for idx in range(self.num_agents):
+                ax1.plot(self.x_Quad[idx][0], self.x_Quad[idx][1], marker = '^')
+            for idx in range(self.numTargets):
+                ax1.plot(self.targets[idx][0], self.targets[idx][1], marker = '*')
+            ax1.set_xlabel('x (m)')
+            ax1.set_ylabel('y (m)')
+            ax1.set_xlim([0, 5])
+            ax1.set_ylim([-2.5, 2.5])
+            plt.show()
 
-ax.plot(target[0], target[1], "*")
-ax.legend(['Target'])
-for idx in range(N_agent):
-    ax.plot(X_save[:,idx*single_xn], X_save[:,idx*single_xn+1])
-    fig_legend.append('Agent')
-    
-ax.legend(fig_legend)
-# ax.set(xlim=(-6, 6), ylim=(-6, 6))
 
-plt.show()
+        # fig1, ax1 = plt.subplots(3,1)
+        # ax1[0].plot(t_save, X_save[:,0])
+        # ax1[0].set_xlabel('t (s)')
+        # ax1[0].set_ylabel('x (m)')
+        # ax1[1].plot(t_save, X_save[:,1])
+        # ax1[1].set_xlabel('t (s)')
+        # ax1[1].set_ylabel('y (m)')
+        # ax1[2].plot(t_save, X_save[:,2])
+        # ax1[2].set_xlabel('t (s)')
+        # ax1[2].set_ylabel('z (m)')
 
-# fig, ax = plt.subplots()
-# ax.set_xlabel('iter')
-# ax.set_title('|K-K*|')
-# ax.plot(iter_save, K_save, marker='.')
-# plt.show()
+        # fig2, ax2 = plt.subplots(3,1)
+        # ax2[0].plot(t_save, X_save[:,7])
+        # ax2[0].set_xlabel('t (s)')
+        # ax2[0].set_ylabel('roll (rad))')
+        # ax2[1].plot(t_save, X_save[:,8])
+        # ax2[1].set_xlabel('t (s)')
+        # ax2[1].set_ylabel('pitch (rad)')
+        # ax2[2].plot(t_save, X_save[:,9])
+        # ax2[2].set_xlabel('t (s)')
+        # ax2[2].set_ylabel('yaw (rad)')
 
-# fig, ax = plt.subplots()
-# ax.set_xlabel('iter')
-# ax.set_title('|P-P_old|')
-# ax.plot(iter_save, P_save, marker='.')
-# plt.show()
 
-# with open('trajectory.csv', 'w') as file:
-#     writer = csv.writer(file)
-#     writer.writerow(t_save)
-#     for idx in range(N_agent):
-#         writer.writerow(X_save[:,idx*4])
-#         writer.writerow(X_save[:,idx*4+1])
+        # plt.show()
+    def _runOC(self, stateNow, timeNow, target):
+        t0 = time.time()
+        xTrajNow, uTrajNow, timeTrajNow, ipoptTime, returnStatus, successFlag = self.Jackal.solve(stateNow, timeNow, target)
+        t1 = time.time()
+        algoTime = t1 - t0
+        print_str = "Sim time [sec]: " + str(round(timeNow, 1)) + "   Comp. time [sec]: " + str(round(algoTime, 3))
+        # apply control
+        uNow = uTrajNow[0, :]
+        return ipoptTime, returnStatus, successFlag, algoTime, print_str, uNow
 
-if save_file == 1:
-    t_fly = t_save[::10]
-    x_fly = X_save[::10]
-    height = np.ones((len(x_fly)))*0.8
-    v_z = np.zeros((len(x_fly)))
-    v_save = v_save.T
-    v_save = v_save[::10]
+if __name__ == '__main__':
+    # dictionary for configuration
+    # dt for Euler integration
+    configDict = {"dt": 0.1, "stepNumHorizon": 10, "startPointMethod": "zeroInput"}
 
-    v_save = np.zeros((2*N_agent,1))
-    for idx in range(len(x_fly)-1):
-        new_v = np.zeros((2*N_agent,1))
-        for j in range(N_agent):
-            new_v[j*2] = (x_fly[idx+1][j*4+2]-x_fly[idx][j*4+2])/(dT*10)
-            new_v[j*2+1] = (x_fly[idx+1][j*4+3]-x_fly[idx][j*4+3])/(dT*10) 
-        v_save = np.hstack((v_save,new_v))
+    buildFlag = True
+    saveFlag = False
 
-    with open('trajectory1.csv', 'w') as file:
-        writer = csv.writer(file)
-        writer.writerow(t_fly)
-        writer.writerow(np.asarray(x_fly[:,0]).flatten())
-        writer.writerow(np.asarray(x_fly[:,1]).flatten())
-        writer.writerow(height)
-        writer.writerow(v_save[0])
-        writer.writerow(v_save[1])
-        writer.writerow(v_z)
+    targets = [[1,1],[2,1]]
+    iniJackal = [0,0,0]
+    iniQuad = [[0,0,0],[0,1,0],[0,-1,0]]
+    desire = [[-0.25,0.5,1],[-0.25,-0.5,1],[0.25,0,1]]
 
-    with open('trajectory2.csv', 'w') as file:
-        writer = csv.writer(file)
-        writer.writerow(t_fly)
-        writer.writerow(np.asarray(x_fly[:,4]).flatten())
-        writer.writerow(np.asarray(x_fly[:,5]).flatten())
-        writer.writerow(height)
-        writer.writerow(v_save[2])
-        writer.writerow(v_save[3])
-        writer.writerow(v_z)
-
-    if N_agent == 3:
-        with open('trajectory3.csv', 'w') as file:
-            writer = csv.writer(file)
-            writer.writerow(t_fly)
-            writer.writerow(np.asarray(x_fly[:,8]).flatten())
-            writer.writerow(np.asarray(x_fly[:,9]).flatten())
-            writer.writerow(height)
-            writer.writerow(v_save[4])
-            writer.writerow(v_save[5])
-            writer.writerow(v_z)
-
+    MySim = FormationSim(configDict, targets, iniJackal, iniQuad, desire, buildFlag, saveFlag)
+    MySim.run()

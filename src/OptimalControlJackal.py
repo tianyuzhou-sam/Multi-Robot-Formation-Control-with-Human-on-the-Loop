@@ -10,7 +10,7 @@ import math
 from JackalSys import JackalSys
 
 
-class OptimalControlProblem:
+class OptimalControlJackal:
     configDict: dict  # a dictionary for parameters
 
     def __init__(self, configDict: dict, MyJackalSys: JackalSys, buildFlag=True):
@@ -340,7 +340,7 @@ if __name__ == '__main__':
     target = [5, 5]
 
     # initialize OptimalControlProblem
-    MyOC = OptimalControlProblem(configDict, MyJackal, buildFlag)
+    MyOC = OptimalControlJackal(configDict, MyJackal, buildFlag)
 
     # test
     x0 = np.array([0, 0, 0])

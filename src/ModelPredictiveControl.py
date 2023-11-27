@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import csv
 from JackalSys import JackalSys
-from OptimalControlProblem import OptimalControlProblem
+from OptimalControlJackal import OptimalControlJackal
 
 
 class ModelPredictiveControl:
@@ -20,7 +20,7 @@ class ModelPredictiveControl:
         self.targets = targets
 
         # initialize OptimalControlProblem
-        self.MyOC = OptimalControlProblem(configDict, self.MyJackalSys, buildFlag)
+        self.MyOC = OptimalControlJackal(configDict, self.MyJackalSys, buildFlag)
         
         # method
         try:
@@ -201,33 +201,33 @@ if __name__ == '__main__':
     x0 = np.array([0, 0, 0])
     u0 = np.array([0, 0])
     targets = [[5,5], [10,5], [10,10]]
-    T = 10
+    T = 20
 
-    # # initialize MPC
-    # MyMPC = ModelPredictiveControl(configDict, buildFlag, targets, saveFlag)
-    # result = MyMPC.run(x0, T)
-    # print(result)
-    # MyMPC.visualize(result)
+    # initialize MPC
+    MyMPC = ModelPredictiveControl(configDict, buildFlag, targets, saveFlag)
+    result = MyMPC.run(x0, T)
+    print(result)
+    MyMPC.visualize(result)
 
-    with open('controlData.csv') as csv_file:
-        reader = csv.reader(csv_file)
-        idx = 0
-        for row in reader:
-            if idx == 0:
-                timeTraj = row
-            elif idx <= 3:
-                if idx == 1:
-                    xTraj = row
-                else:
-                    xTraj = np.vstack((xTraj, row))
-            else:
-                if idx == 4:
-                    uTraj = row
-                else:
-                    uTraj = np.vstack((uTraj, row))
-            idx += 1
+    # with open('controlData.csv') as csv_file:
+    #     reader = csv.reader(csv_file)
+    #     idx = 0
+    #     for row in reader:
+    #         if idx == 0:
+    #             timeTraj = row
+    #         elif idx <= 3:
+    #             if idx == 1:
+    #                 xTraj = row
+    #             else:
+    #                 xTraj = np.vstack((xTraj, row))
+    #         else:
+    #             if idx == 4:
+    #                 uTraj = row
+    #             else:
+    #                 uTraj = np.vstack((uTraj, row))
+    #         idx += 1
 
-    print(xTraj[0])
+    # print(xTraj[0])
 
     # # trajectories for states
     # fig1, ax1 = plt.subplots()

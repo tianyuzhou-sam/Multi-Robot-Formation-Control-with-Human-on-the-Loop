@@ -8,7 +8,7 @@ import os
 import sys
 sys.path.append(os.getcwd()+'/src')
 from JackalSys import JackalSys
-from OptimalControlProblem import OptimalControlProblem
+from OptimalControlJackal import OptimalControlJackal
 import json
 import transforms3d
 import csv
@@ -36,7 +36,7 @@ class ModelPredictiveControl:
         self.targets = targets
         self.offset = 0.1
         # initialize OptimalControlProblem
-        self.MyOC = OptimalControlProblem(configDict, self.MyJackalSys, buildFlag)
+        self.MyJackalOc = OptimalControlJackal(configDict, self.MyJackalSys, buildFlag)
         
         # method
         try:
@@ -243,7 +243,7 @@ class ModelPredictiveControl:
 
     def _runOC(self, stateNow, timeNow, target):
         t0 = time.time()
-        xTrajNow, uTrajNow, timeTrajNow, ipoptTime, returnStatus, successFlag = self.MyOC.solve(stateNow, timeNow, target)
+        xTrajNow, uTrajNow, timeTrajNow, ipoptTime, returnStatus, successFlag = self.MyJackalOc.solve(stateNow, timeNow, target)
         t1 = time.time()
         algoTime = t1 - t0
         print_str = "Sim time [sec]: " + str(round(timeNow, 1)) + "   Comp. time [sec]: " + str(round(algoTime, 3))
@@ -288,10 +288,10 @@ class ModelPredictiveControl:
         ax2[0].plot(timeTraj[:-1], uTraj[:,0], color="blue", linewidth=2)
         # for input bounds
         ax2[0].plot(timeTraj[:-1],
-            self.MyOC.lin_vel_lb*np.ones(timeTraj[:-1].size),
+            self.MyJackalOc.lin_vel_lb*np.ones(timeTraj[:-1].size),
             color="black", linewidth=2, linestyle="dashed")
         ax2[0].plot(timeTraj[:-1],
-            self.MyOC.lin_vel_ub*np.ones(timeTraj[:-1].size),
+            self.MyJackalOc.lin_vel_ub*np.ones(timeTraj[:-1].size),
             color="black", linewidth=2, linestyle="dashed")
         # ax2[0].set_xlabel("time [sec]")
         ax2[0].set_ylabel(r'$v \  [\mathrm{m/s}]$')
@@ -299,10 +299,10 @@ class ModelPredictiveControl:
         ax2[1].plot(timeTraj[:-1], uTraj[:,1], color="blue", linewidth=2)
         # for input bounds
         ax2[1].plot(timeTraj[:-1],
-            self.MyOC.ang_vel_lb*np.ones(timeTraj[:-1].size),
+            self.MyJackalOc.ang_vel_lb*np.ones(timeTraj[:-1].size),
             color="black", linewidth=2, linestyle="dashed")
         ax2[1].plot(timeTraj[:-1],
-            self.MyOC.ang_vel_ub*np.ones(timeTraj[:-1].size),
+            self.MyJackalOc.ang_vel_ub*np.ones(timeTraj[:-1].size),
             color="black", linewidth=2, linestyle="dashed")
         ax2[1].set_xlabel("time [sec]")
         ax2[1].set_ylabel(r'$w\  [\mathrm{rad/s}]$')

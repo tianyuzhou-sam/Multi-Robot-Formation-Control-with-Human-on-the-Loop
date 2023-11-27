@@ -4,7 +4,7 @@ import sys
 import numpy as np
 sys.path.append(os.getcwd()+'/src')
 from JackalSys import JackalSys
-from OptimalControlProblem import OptimalControlProblem
+from OptimalControlJackal import OptimalControlJackal
 
 if __name__ == '__main__':
     # dictionary for configuration
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     target = [5, 5]
 
     # initialize OptimalControlProblem
-    MyOC = OptimalControlProblem(configDict, MyJackal, buildFlag)
+    MyOC = OptimalControlJackal(configDict, MyJackal, buildFlag)
 
     # test
     x0 = np.array([0, 0, 0])

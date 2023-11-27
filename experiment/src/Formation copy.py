@@ -19,13 +19,9 @@ sys.path.append('/home/lab-user/tianyu/Mambo-Tracking-Interface/lib')
 import csv_helper
 from UdpProtocol import UdpProtocol
 
-
-# when distance between A and B < this number, we say A and B have same position
-DISTANCE_THRESHOLD = 0.2
-
 class FormationPlanner:
     num_agents: int  # number of agents
-    dt: float  # time step
+    planning_frequency: float  # time step
     list_AgentFSMExp: list  # a list of AgentFSMExp objects
     num_cluster: int  # number of clusters for task decomposition, mission planning
     number_of_iterations: int  # number of iterations for task decomposition, mission planning
@@ -68,50 +64,28 @@ class FormationPlanner:
         Run the planner online with Motion Capture System.
         """
         # self.list_AgentFSMExp = list()  # a list for Agent Finite State Machine
-        self.dt = 0.5 
+        self.dt = 0.2
         # number of clusters for task decomposition
         self.num_cluster = self.num_agents
         # number of iterations for task decomposition
         self.number_of_iterations = 500
         self.iter_max = 10
         self.epsilon = 10e-3
+
         # flying time
-        fly_time = 60
+        fly_time = 100
         # formation
         self.distance = formation
 
-        # dynamic (only for simulation enviornment setup)
-        g = 9.81
-        m = 0.2
-        Ixx = 0.1
-        Iyy = 0.1
-        Izz = 0.1
+        A_single = np.array([[0,0,1,0], 
+                             [0,0,0,1],
+                             [0,0,-1/10,0],
+                             [0,0,0,-1/10]])
 
-        A_single = np.array([[0,0,0,1,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,1,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,1,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,-g,0,0,0,0],
-                            [0,0,0,0,0,0,g,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,0,0,1,0,0],
-                            [0,0,0,0,0,0,0,0,0,0,1,0],
-                            [0,0,0,0,0,0,0,0,0,0,0,1],
-                            [0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,0,0,0,0,0]])
-
-        B_single = np.array([[0,0,0,0],
-                            [0,0,0,0],
-                            [0,0,0,0],
-                            [0,0,0,0],
-                            [0,0,0,0],
-                            [1/m,0,0,0],
-                            [0,0,0,0],
-                            [0,0,0,0],
-                            [0,0,0,0],
-                            [0,1/Ixx,0,0],
-                            [0,0,1/Iyy,0],
-                            [0,0,0,1/Izz]])
+        B_single = np.array([[0,0],
+                             [0,0],
+                             [1,0],
+                             [0,1]])
         # dimension of group matrices
         self.dim_xn_single = len(B_single)                          # single agent
         self.dim_xn = self.dim_xn_single*self.num_agents                # number of rows
@@ -165,7 +139,7 @@ class FormationPlanner:
         # get target position
         target_position = await self.update_target_mocap()
 
-        self.height_fly = 1  # a constant fly height in meter
+        self.height_fly = 1.0  # a constant fly height in meter
         self.time_name = time.strftime("%Y%m%d%H%M%S")
 
         time_begin = time.time()
@@ -191,13 +165,14 @@ class FormationPlanner:
             target_position = await self.update_target_mocap()
 
             # do formation
-            quad_state_list, jackal_state_list, states = self.formation(K, time_begin, agents_position_list, jackal_state_list, target_position, quad_state_list, A, B, T)
+            quad_state_list, jackal_state_list = self.formation(K, time_begin, agents_position_list, jackal_state_list, target_position, quad_state_list, A, B, T)
 
             # plt.pause(1E-9)
             time_sleep = max(0, self.dt - time.time() + t_start)
             time_used = time.time() - time_start_fly
             print("Current Time [sec]: " + str(time.time()-time_begin))
             await asyncio.sleep(time_sleep)
+
 
     def formation(self, K, time_begin, agents_position_list, jackal_state_list, target_position, quad_state_list, A, B, T):
         old_v = np.zeros((2*self.num_agents,1))
@@ -208,69 +183,65 @@ class FormationPlanner:
             else:
                 old_v[idx*2] = quad_state_list[-1][idx*6+4]
                 old_v[idx*2+1] = quad_state_list[-1][idx*6+5]
-        
-        x = np.array([[agents_position_list[0][0]],[agents_position_list[0][1]],[self.height_fly]])
-        x = np.vstack((x, np.zeros((9,1))))
+        x = np.array([[agents_position_list[0][0]],[agents_position_list[0][1]]])
+        x = np.vstack((x, old_v[0], old_v[1]))
         for idx in range(self.num_agents-1):
-            x = np.vstack((x, agents_position_list[idx+1][0], agents_position_list[idx+1][1], [self.height_fly]))
-            x = np.vstack((x, np.zeros((9,1))))
+            x = np.vstack((x, agents_position_list[idx+1][0], agents_position_list[idx+1][1], old_v[(idx+1)*2], old_v[(idx+1)*2+1]))
         desire_state = self.get_desire_state(target_position[:2])
-
+        
         z = np.matmul(T, x)
         X = z - desire_state
         u = -np.matmul(K, X)
-
         dx = np.matmul(A, x) + np.matmul(B, u)
 
-        print(dx)
         x = x + dx*self.dt
 
-        
         v = np.zeros((2*self.num_agents,1))
         for idx in range(self.num_agents):
             if quad_state_list.size == self.num_agents*6+1:
-                v[idx*2] = (x.tolist()[idx*self.dim_xn_single]-quad_state_list[idx*6+1])/self.dt
-                v[idx*2+1] = (x.tolist()[idx*self.dim_xn_single+1]-quad_state_list[idx*6+2])/self.dt
+                v[idx*2] = (x.tolist()[idx*4]-quad_state_list[idx*6+1])/self.dt
+                v[idx*2+1] = (x.tolist()[idx*4+1]-quad_state_list[idx*6+2])/self.dt
             else:
-                v[idx*2] = (x.tolist()[idx*self.dim_xn_single]-quad_state_list[-1][idx*6+1])/self.dt
-                v[idx*2+1] = (x.tolist()[idx*self.dim_xn_single+1]-quad_state_list[-1][idx*6+2])/self.dt
+                v[idx*2] = (x.tolist()[idx*4]-quad_state_list[-1][idx*6+1])/self.dt
+                v[idx*2+1] = (x.tolist()[idx*4+1]-quad_state_list[-1][idx*6+2])/self.dt
 
         quad_state = time.time() - time_begin
         for k in range(self.num_agents):
-            quad_state = np.hstack((quad_state, x.tolist()[self.dim_xn_single*k], x.tolist()[self.dim_xn_single*k+1], self.height_fly, 0, 0, 0))
+            quad_state = np.hstack((quad_state, x.tolist()[self.dim_xn_single*k], x.tolist()[self.dim_xn_single*k+1], self.height_fly, x.tolist()[self.dim_xn_single*k+2], x.tolist()[self.dim_xn_single*k+3], 0))
         quad_state_list = np.vstack((quad_state_list, quad_state))
 
         jackal_state_list = np.vstack((jackal_state_list, np.hstack((target_position[0], target_position[1]))))
 
         self.save_Traj(time_begin, quad_state_list, jackal_state_list)
-        return quad_state_list ,jackal_state_list, x
+        return quad_state_list, jackal_state_list
         
+
     def save_Traj(self, time_begin, quad_state_list, jackal_state_list):
         for idx in range(self.num_agents):
             # output trajectories as a CSV file
             array_csv = quad_state_list[:,0]
-            
             array_csv = np.vstack((array_csv, quad_state_list[:,idx*6+1], quad_state_list[:,idx*6+2], quad_state_list[:,idx*6+3]))
             array_csv = np.vstack((array_csv, quad_state_list[:,idx*6+4], quad_state_list[:,idx*6+5], quad_state_list[:,idx*6+6]))
-            
             filename_csv = os.path.expanduser("~") + "/tianyu/Mambo-Tracking-Interface" + self.config_data_list[idx]["DIRECTORY_TRAJ"] + self.time_name + ".csv"
             np.savetxt(filename_csv, array_csv, delimiter=",")
-
+        
         array_csv = quad_state_list[:,0]
         array_csv = np.vstack((array_csv, jackal_state_list[:,0], jackal_state_list[:,1]))
         filename_csv = os.path.expanduser("~") + "/tianyu/Mambo-Tracking-Interface/scripts_aimslab/traj_csv_files/jackal/" + self.time_name + ".csv"
         np.savetxt(filename_csv, array_csv, delimiter=",")
 
     def get_desire_state(self, target_position):
+
+
         for idx in range(self.num_agents-1):
             if idx == 0:
-                desire_state = np.array(self.distance[0:2])
-                desire_state = np.vstack((desire_state, np.zeros((self.dim_xn_single-2,1))))
+                desire_state = np.array(self.distance[idx*int(self.dim_xn_single /2):(idx+1)*int(self.dim_xn_single /2)])
+                desire_state = np.vstack((desire_state, np.zeros((int(self.dim_xn_single /2),1))))
             else:
-                desire_state = np.vstack((desire_state, self.distance[2*idx:2*idx+2]))
-                desire_state = np.vstack((desire_state, np.zeros((self.dim_xn_single-2,1))))
-        desire_state = np.vstack((desire_state, target_position[0], target_position[1], self.height_fly))
-        desire_state = np.vstack((desire_state, np.zeros((self.dim_xn_single-3,1))))
+                desire_state = np.vstack((desire_state, self.distance[idx*int(self.dim_xn_single /2):(idx+1)*int(self.dim_xn_single /2)]))
+                desire_state = np.vstack((desire_state, np.zeros((int(self.dim_xn_single /2),1))))
+        desire_state = np.vstack((desire_state, target_position[0], target_position[1]))
+        desire_state = np.vstack((desire_state, np.zeros((int(self.dim_xn_single /2),1))))
 
         return desire_state
 
