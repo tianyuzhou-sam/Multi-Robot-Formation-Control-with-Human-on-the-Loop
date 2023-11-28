@@ -18,8 +18,6 @@ from sympy import quadratic_residues, true
 sys.path.append('/home/lab-user/tianyu/Mambo-Tracking-Interface/lib')
 import csv_helper
 from UdpProtocol import UdpProtocol
-sys.path.append(os.getcwd()+'/src')
-from QuadSys import QuadSys
 
 class FormationPlanner:
     num_agents: int  # number of agents
@@ -76,61 +74,33 @@ class FormationPlanner:
 
         # flying time
         fly_time = 100
+        # formation
+        self.distance = formation
 
+        self.A = np.array([[0,0,1,0], 
+                           [0,0,0,1],
+                           [0,0,-1/10,0],
+                           [0,0,0,-1/10]])
 
-        self.g = 9.81
-        self.m = 0.2
-        self.Ix = 8.1 * 1e-3
-        self.Iy = 8.1 * 1e-3
-        self.Iz = 14.2 * 1e-3
-        self.A = np.array([[0,0,0,1,0,0,0,0,0,0,0,0],
-                           [0,0,0,0,1,0,0,0,0,0,0,0],
-                           [0,0,0,0,0,1,0,0,0,0,0,0],
-                           [0,0,0,0,0,0,0,self.g,0,0,0,0],
-                           [0,0,0,0,0,0,-self.g,0,0,0,0,0],
-                           [0,0,0,0,0,0,0,0,0,0,0,0],
-                           [0,0,0,0,0,0,0,0,0,1,0,0],
-                           [0,0,0,0,0,0,0,0,0,0,1,0],
-                           [0,0,0,0,0,0,0,0,0,0,0,1],
-                           [0,0,0,0,0,0,0,0,0,0,0,0],
-                           [0,0,0,0,0,0,0,0,0,0,0,0],
-                           [0,0,0,0,0,0,0,0,0,0,0,0]])
-
-        self.B = np.array([[0,0,0,0],
-                           [0,0,0,0],
-                           [0,0,0,0],
-                           [0,0,0,0],
-                           [0,0,0,0],
-                           [1/self.m,0,0,0],
-                           [0,0,0,0],
-                           [0,0,0,0],
-                           [0,0,0,0],
-                           [0,1/self.Ix,0,0],
-                           [0,0,1/self.Iy,0],
-                           [0,0,0,1/self.Iz]])
-        
-
-        configDict = {"dt": self.dt, "stepNumHorizon": 10, "startPointMethod": "zeroInput"}
-        self.MyQuad = QuadSys(configDict, self.g, self.m, self.Ix, self.Iy, self.Iz)
-
-        
+        self.B = np.array([[0,0],
+                           [0,0],
+                           [1,0],
+                           [0,1]])
         # dimension of group matrices
-        self.dim_xn = len(self.B)                          # single agent
-        self.dim_un = len(self.B[0])                       # number of columns
-
+        self.dim_xn = len(self.B)                          # single agent         # number of rows
+        self.dim_un = len(self.B[0])              # number of columns
+        
         self.z = np.zeros((self.num_agents, self.dim_xn))
         for idx in range(self.num_agents):
             self.z[idx][0] = formation[idx][0]
             self.z[idx][1] = formation[idx][1]
-            self.z[idx][2] = formation[idx][2]
         
         self.Ad = np.eye(self.dim_xn) + self.dt*self.A
         self.Bd = self.dt*self.B
 
         self.Q = np.eye(self.dim_xn)*10
         self.R = np.eye(self.dim_un)*1
-        
-        
+
         P = np.matrix(scipy.linalg.solve_discrete_are(self.Ad, self.Bd, self.Q, self.R))
         self.K = np.matrix(np.matmul(scipy.linalg.inv(self.R + self.Bd.T*P*self.Bd),self.Bd.T)*P*self.Ad)
 
@@ -170,14 +140,16 @@ class FormationPlanner:
         # get target position
         target_position = await self.update_target_mocap()
 
+        self.height_fly = 1.0  # a constant fly height in meter
         self.time_name = time.strftime("%Y%m%d%H%M%S")
 
         time_begin = time.time()
         time_used = 0  # initialize the global time as 0
         quad_state_list = time.time() - time_begin
         for idx in range(self.num_agents):
-            quad_state_list = np.hstack((quad_state_list, agents_position_list[idx][0:3], 0, 0, 0, 0, 0, 0, 0, 0, 0))
-        target_state_list = np.hstack((target_position[0], target_position[1],0,0))
+            quad_state_list = np.hstack((quad_state_list, agents_position_list[idx][0:2], self.height_fly, 0, 0, 0))
+        target_state_list = np.hstack((target_position[0], target_position[1], 0, 0))
+
 
         time_start_fly = time.time()
         while(time_used < fly_time):
@@ -200,22 +172,55 @@ class FormationPlanner:
 
 
     def formation(self, time_begin, agents_position_list, target_state_list, target_position, quad_state_list):
+        old_v = np.zeros((2*self.num_agents,1))
+        old_target_v = np.zeros((2))
+        for idx in range(self.num_agents):
+            if quad_state_list.size == self.num_agents*6+1:
+                old_v[idx*2] = quad_state_list[idx*6+4]
+                old_v[idx*2+1] = quad_state_list[idx*6+5]
+                old_target_v[0] = target_state_list[2]
+                old_target_v[1] = target_state_list[3]
+            else:
+                old_v[idx*2] = quad_state_list[-1][idx*6+4]
+                old_v[idx*2+1] = quad_state_list[-1][idx*6+5]
+                old_target_v[0] = target_state_list[-1][2]
+                old_target_v[1] = target_state_list[-1][3]
 
-        x = quad_state_list[-1][1:self.dim_xn+1]
+        # x = np.array([[agents_position_list[0][0]],[agents_position_list[0][1]]])
+        # x = np.vstack((x, old_v[0], old_v[1]))
+        
+        # for idx in range(self.num_agents-1):
+        #     x = np.vstack((x, agents_position_list[idx+1][0], agents_position_list[idx+1][1], old_v[(idx+1)*2], old_v[(idx+1)*2+1]))
 
-        TargetObserved = [target_position[0], target_position[1], 0, old_target_v[0], old_target_v[1], 0, 0, 0, 0, 0, 0, 0]
+        x = np.zeros((self.num_agents, self.dim_xn))
+        for idx in range(self.num_agents):
+            x[idx,0] = agents_position_list[idx][0]
+            x[idx,1] = agents_position_list[idx][1]
+            x[idx,2] = old_v[idx*2,0]
+            x[idx,3] = old_v[idx*2+1,0]
+        
+        TargetObserved = [target_position[0], target_position[1], old_target_v[0], old_target_v[1]]
 
+        quad_state = np.zeros((self.num_agents*6+1))
         quad_state[0] = time.time() - time_begin
         for idx in range(self.num_agents):
+
             u = -np.matmul(self.K, x[idx] - self.z[idx] - TargetObserved)
             u = u.tolist()[0]
-            u[0] = u[0] + self.m*self.g
 
-            newX = self.MyQuad._discDynFun(x[idx], u)
+            dx = np.matmul(self.A, x[idx]) + np.matmul(self.B, u)
             
-            # put newX into quadstate
+            newX = x[idx] + dx*self.dt
+
+            quad_state[idx*6+1] = newX[0]
+            quad_state[idx*6+2] = newX[1]
+            quad_state[idx*6+3] = self.height_fly
+            quad_state[idx*6+4] = newX[2]
+            quad_state[idx*6+5] = newX[3]
+            quad_state[idx*6+6] = 0
             
         quad_state_list = np.vstack((quad_state_list, quad_state))
+
         target_state_list = np.vstack((target_state_list, np.hstack((target_position[0], target_position[1], old_target_v[0], old_target_v[1]))))
 
         self.save_Traj(time_begin, quad_state_list, target_state_list)
@@ -226,8 +231,8 @@ class FormationPlanner:
         for idx in range(self.num_agents):
             # output trajectories as a CSV file
             array_csv = quad_state_list[:,0]
-            array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.dim_xn+1], quad_state_list[:,idx*self.dim_xn+2], quad_state_list[:,idx*self.dim_xn+3]))
-            array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.dim_xn+4], quad_state_list[:,idx*self.dim_xn+5], quad_state_list[:,idx*self.dim_xn+6]))
+            array_csv = np.vstack((array_csv, quad_state_list[:,idx*6+1], quad_state_list[:,idx*6+2], quad_state_list[:,idx*6+3]))
+            array_csv = np.vstack((array_csv, quad_state_list[:,idx*6+4], quad_state_list[:,idx*6+5], quad_state_list[:,idx*6+6]))
             filename_csv = os.path.expanduser("~") + "/tianyu/Mambo-Tracking-Interface" + self.config_data_list[idx]["DIRECTORY_TRAJ"] + self.time_name + ".csv"
             np.savetxt(filename_csv, array_csv, delimiter=",")
         

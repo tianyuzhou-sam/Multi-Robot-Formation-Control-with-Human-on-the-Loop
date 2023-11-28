@@ -254,8 +254,8 @@ class FormationPlanner:
         for idx in range(self.num_agents):
             # output trajectories as a CSV file
             array_csv = quad_state_list[:,0]
-            array_csv = np.vstack((array_csv, quad_state_list[:,idx*6+1], quad_state_list[:,idx*6+2], quad_state_list[:,idx*6+3]))
-            array_csv = np.vstack((array_csv, quad_state_list[:,idx*6+4], quad_state_list[:,idx*6+5], quad_state_list[:,idx*6+6]))
+            array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.dim_xn+1], quad_state_list[:,idx*self.dim_xn+2], quad_state_list[:,idx*self.dim_xn+3]))
+            array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.dim_xn+4], quad_state_list[:,idx*self.dim_xn+5], quad_state_list[:,idx*self.dim_xn+6]))
             filename_csv = os.path.expanduser("~") + "/tianyu/Mambo-Tracking-Interface" + self.config_data_list[idx]["DIRECTORY_TRAJ"] + self.time_name + ".csv"
             np.savetxt(filename_csv, array_csv, delimiter=",")
         
