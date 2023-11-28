@@ -35,6 +35,7 @@ class FormationSim:
         self.reached = 0
         self.numTargets = len(targets)
         self.offset = 0.1
+        self.hold = 2
 
         self.g = 9.81
         self.m = 0.2
@@ -121,7 +122,10 @@ class FormationSim:
         while (self.reached < self.numTargets):    
 
             # solve
-            ipoptTime, returnStatus, successFlag, algoTime, print_str, uNow = self.runOnce(self.x_Jackal, timeNow, target)
+            if timeNow > self.hold:
+                ipoptTime, returnStatus, successFlag, algoTime, print_str, uNow = self.runOnce(self.x_Jackal, timeNow, target)
+            else:
+                uNow = [0,0]
 
             JackalObserved = [self.x_Jackal[0], self.x_Jackal[1], 0, uNow[0]*np.cos(self.x_Jackal[2]), uNow[0]*np.sin(self.x_Jackal[2]), 0, 0, 0, 0, 0, 0, 0]
             
@@ -166,7 +170,7 @@ class FormationSim:
                 ax1.plot(self.targets[idx][0], self.targets[idx][1], marker = '*')
             ax1.set_xlabel('x (m)')
             ax1.set_ylabel('y (m)')
-            ax1.set_xlim([0, 5])
+            ax1.set_xlim([-2.5, 2.5])
             ax1.set_ylim([-2.5, 2.5])
             plt.show()
 
