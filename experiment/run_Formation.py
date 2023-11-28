@@ -14,7 +14,10 @@ if __name__ == "__main__":
     # formation = np.array([[-1.5],[1.0],[-1.5],[-1.0]]) run 8 
     # formation = np.array([[-1.5],[0.9],[-1.5],[-0.9]]) run 9 10 11 12
     # formation = np.array([[-1.5],[0.9],[-1.5],[-0.9]])
-    formation = np.array([[1,0],[-1.,0.9],[-1.,-0.9]])
+    # formation = np.array([[0.5,0,1],[-0.25,0.5,1],[-0.25,-0.5,1]]) run 12
+    # formation = np.array([[0.5,0,1],[-0.,0.75,1],[-0.,-0.75,1]]) run 13
+    formation = np.array([[0.5,0,1],[-0.,0.75,1],[-0.,-0.75,1]])
+
     # run the planner online
     asyncio.run(MyPlanner.run_planner(formation))
     asyncio.ensure_future(MyPlanner.run_planner(formation))

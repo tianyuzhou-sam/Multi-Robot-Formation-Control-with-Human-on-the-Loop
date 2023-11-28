@@ -5,7 +5,6 @@ from numpy.linalg import inv
 from numpy import linalg as LA
 from scipy import integrate
 import scipy
-import control
 import matplotlib.pyplot as plt
 import csv
 import os

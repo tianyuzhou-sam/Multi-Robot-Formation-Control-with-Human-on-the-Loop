@@ -18,7 +18,10 @@ if __name__ == '__main__':
     x0 = np.array([-1.5, 0, 0])
     u0 = np.array([0, 0])
     T = 60
-    targets = [[-0.5,0.25], [1,-1], [2.2,-0.15], [2.2, 0.15], [-1.5,0]]
+
+    # obstacle: -0.65, -0.3    5 boxes-y
+    #            0.73, -0.67   5 boxes+y
+    targets = [[-0.5,0.25], [0.9,-1.3], [1.9,0.0]]
 
     # initialize MPC
     MyMPC = ModelPredictiveControl(configDict, buildFlag, targets, saveFlag, config_file_name)

@@ -66,7 +66,7 @@ class FormationPlanner:
         Run the planner online with Motion Capture System.
         """
         # self.list_AgentFSMExp = list()  # a list for Agent Finite State Machine
-        self.dt = 0.5
+        self.dt = 0.2
         # number of clusters for task decomposition
         self.num_cluster = self.num_agents
         # number of iterations for task decomposition
@@ -75,7 +75,7 @@ class FormationPlanner:
         self.epsilon = 10e-3
 
         # flying time
-        fly_time = 100
+        fly_time = 50
 
 
         self.g = 9.81
@@ -201,20 +201,32 @@ class FormationPlanner:
 
     def formation(self, time_begin, agents_position_list, target_state_list, target_position, quad_state_list):
 
-        x = quad_state_list[-1][1:self.dim_xn+1]
+        old_target_v = np.zeros((2))
+
+        for idx in range(self.num_agents):
+            if quad_state_list.size == self.num_agents*self.dim_xn+1:
+                old_target_v[0] = target_state_list[2]
+                old_target_v[1] = target_state_list[3]
+                x = quad_state_list[1:self.dim_xn*self.num_agents+1]
+            else:
+                old_target_v[0] = target_state_list[-1][2]
+                old_target_v[1] = target_state_list[-1][3]
+                x = quad_state_list[-1][1:self.dim_xn*self.num_agents+1]
 
         TargetObserved = [target_position[0], target_position[1], 0, old_target_v[0], old_target_v[1], 0, 0, 0, 0, 0, 0, 0]
 
+        quad_state = np.zeros((self.num_agents*self.dim_xn+1))
         quad_state[0] = time.time() - time_begin
         for idx in range(self.num_agents):
-            u = -np.matmul(self.K, x[idx] - self.z[idx] - TargetObserved)
+            agent_x = x[idx*self.dim_xn:(idx+1)*self.dim_xn]
+            u = -np.matmul(self.K, agent_x - self.z[idx] - TargetObserved)
             u = u.tolist()[0]
             u[0] = u[0] + self.m*self.g
 
-            newX = self.MyQuad._discDynFun(x[idx], u)
-            
-            # put newX into quadstate
-            
+            newX = self.MyQuad._discDynFun(agent_x, u)
+            for jdx in range(self.dim_xn):
+                quad_state[idx*self.dim_xn+jdx+1] = newX[jdx]
+
         quad_state_list = np.vstack((quad_state_list, quad_state))
         target_state_list = np.vstack((target_state_list, np.hstack((target_position[0], target_position[1], old_target_v[0], old_target_v[1]))))
 
