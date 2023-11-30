@@ -9,7 +9,7 @@ import matplotlib.patches as patches
 
 class InputWaypoints(object):
 
-    def __init__(self, initial, final, space_limit):
+    def __init__(self, initial, final, space_limit, obs_position):
 
         self.initialState = initial
         self.finalState = final
@@ -17,6 +17,7 @@ class InputWaypoints(object):
         self.space_limit_x = space_limit[0]
         # the lab space limit [meter] in y-axis [y_min, y_max]
         self.space_limit_y = space_limit[1]
+        self.obs_position = obs_position
 
 
     def run(self):
@@ -42,11 +43,16 @@ class InputWaypoints(object):
         # plot start and goal
         self.ax.scatter(self.initialState[0], self.initialState[1], color='green')
         self.ax.scatter(self.finalState[0], self.finalState[1], color='violet')
+
+        for idx in range(len(self.obs_position)):
+            obs = patches.Rectangle((self.obs_position[idx][0], self.obs_position[idx][1]), self.obs_position[idx][2], self.obs_position[idx][3], 
+                                        linewidth=1, edgecolor='black', facecolor='black')
+            self.ax.add_patch(obs)
         
 
         # set legends
-        colors = ["green", "violet", "blue"]
-        marker_list = ["o", "o", "o"]
+        colors = ["green", "violet", "red"]
+        marker_list = ["o", "o", "+"]
         labels = ["start", "goal", "waypoints"]
         def f(marker_type, color_type): return plt.plot([], [], marker=marker_type, color=color_type, ls="none")[0]
         handles = [f(marker_list[i], colors[i]) for i in range(len(labels))]

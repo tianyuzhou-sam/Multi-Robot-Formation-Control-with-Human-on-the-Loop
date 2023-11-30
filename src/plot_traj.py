@@ -209,7 +209,7 @@ class Simulator:
         
         # if cluster_centers is empty, plot targets
         for idx_target in range(int(len(targets_position)/2)):
-            ax.scatter(targets_position[2*idx_target], targets_position[2*idx_target+1], marker="*", color="red")
+            ax.scatter(targets_position[2*idx_target], targets_position[2*idx_target+1], s=100, marker="*", color="red")
             if target_text_flag:
                 ax.text(targets_position[2*idx_target]+text_offset[0], targets_position[2*idx_target+1]+text_offset[1],
                         "T"+str(idx_target), fontweight="bold", color="red")
@@ -230,7 +230,7 @@ class Simulator:
                     agent_color = "blue"
                 ax.plot(list(map(lambda x:x, path_many_each_agent[0::2])),
                         list(map(lambda x:x, path_many_each_agent[1::2])),
-                        linewidth=2, color=agent_color, linestyle="dashed")
+                        linewidth=2, color=agent_color, linestyle="solid")
                 
 
     def figure_settings(self, ax, path_legend_flag: bool, legend_flag=True):
@@ -239,24 +239,24 @@ class Simulator:
 
         path_legend_flag = True if plot path legends
         """
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        ax.set_aspect("equal")
+        ax.set_xlabel("x (m)")
+        ax.set_ylabel("y (m)")
+        ax.set_title("T = 25s", fontweight='bold')
         ax.set_xlim([self.map_center[0]-self.map_width_meter/2, self.map_center[0]+self.map_width_meter/2])
         ax.set_ylim([self.map_center[1]-self.map_height_meter/2, self.map_center[1]+self.map_height_meter/2])
 
         # set legends
         if legend_flag:
             colors = ["red", "blue", "red"]
-            marker_list = ["o", "o", "x"]
+            marker_list = ["o", "o", "*"]
             labels = ["Leader", "Agent", "Waypoint"]
             f = lambda m,c: plt.plot([],[],marker=m, color=c, ls="none")[0]
             handles = [f(marker_list[i], colors[i]) for i in range(len(labels))]
 
             if path_legend_flag:
                 # add legend about path
-                handles.append(plt.plot([],[], linestyle="dashed", color="red", linewidth=2)[0])
-                handles.append(plt.plot([],[], linestyle="dashed", color="blue", linewidth=2)[0])
+                handles.append(plt.plot([],[], linestyle="solid", color="red", linewidth=2)[0])
+                handles.append(plt.plot([],[], linestyle="solid", color="blue", linewidth=2)[0])
                 handles.append(plt.plot([],[], marker="s", color="black", ls="none")[0])
                 labels.extend(["Path", "Path", "Obstacles"])
                 # a tuple includes the handles and labels of legend
@@ -267,29 +267,56 @@ class Simulator:
 
 
 if __name__ == '__main__':
-    map_width_meter = 5
+    map_width_meter = 6
     map_height_meter = 4
     map_center = [0,0]
     resolution = 2
     value_non_obs = 0
     value_obs = 255
-    obs_size = 0.4
+    obs_size = 0.26
+
+    simulationFlag = True
 
     agent_position = [0,0, 0,0, 0,0, 0,0]
-    target_position = [-0.5,0.25, 0.9,-1.3, 1.9,0.0]
-    obs_position = [[-0.65-obs_size,-0.3-5*obs_size,obs_size,5*obs_size], [0.73,-0.67,obs_size,5*obs_size]]
+    obs_position = [[-0.65-obs_size,-0.28-5*obs_size,obs_size,5*obs_size], [0.73,-0.60,obs_size,5*obs_size]]
 
-    MyPlot = Simulator(map_width_meter, map_height_meter, map_center, resolution, value_non_obs, value_obs)
+    
 
-    jackal_data = np.genfromtxt('experiment/traj_records/jackal.csv', delimiter=',')
-    mambo_01_data = np.genfromtxt('experiment/traj_records/mambo_01.csv', delimiter=',')
-    mambo_02_data = np.genfromtxt('experiment/traj_records/mambo_02.csv', delimiter=',')
-    mambo_03_data = np.genfromtxt('experiment/traj_records/mambo_03.csv', delimiter=',')
+    if simulationFlag:
+        jackal_data = np.genfromtxt('jackal.csv', delimiter=',')
+        mambo_01_data = np.genfromtxt('mambo_01.csv', delimiter=',')
+        mambo_02_data = np.genfromtxt('mambo_02.csv', delimiter=',')
+        mambo_03_data = np.genfromtxt('mambo_03.csv', delimiter=',')
+        target_position = [-0.5,0.5, 0.8,-1.35, 2,0]
+    else:
+        jackal_data = np.genfromtxt('experiment/traj_records/jackal.csv', delimiter=',')
+        mambo_01_data = np.genfromtxt('experiment/traj_records/mambo_01.csv', delimiter=',')
+        mambo_02_data = np.genfromtxt('experiment/traj_records/mambo_02.csv', delimiter=',')
+        mambo_03_data = np.genfromtxt('experiment/traj_records/mambo_03.csv', delimiter=',')
+        target_position = [-0.5,0.25, 0.9,-1.3, 1.9,0.0]
+
     jackal_position = []
     mambo_01_position = []
     mambo_02_position = []
     mambo_03_position = []
-    for idx in range(len(jackal_data[0])):
+
+    case = 0
+
+    if case == 0:
+        plotLength = len(jackal_data[0])        # 25s
+    elif case == 1:
+        plotLength = 1          # 0s
+    elif case == 2:
+        plotLength = 50         # 5s
+    elif case == 3:
+        plotLength = 70         # 7s   
+    elif case == 4:
+        plotLength = 100        # 10s 
+    elif case == 5:
+        plotLength = 200        # 20s   
+
+
+    for idx in range(plotLength):
         jackal_position.append(jackal_data[1][idx])
         jackal_position.append(jackal_data[2][idx])
         mambo_01_position.append(mambo_01_data[1][idx])
@@ -300,14 +327,16 @@ if __name__ == '__main__':
         mambo_03_position.append(mambo_03_data[2][idx])
 
     agent_position = []
-    agent_position.append(jackal_position[0])
-    agent_position.append(jackal_position[1])
-    agent_position.append(mambo_01_position[0])
-    agent_position.append(mambo_01_position[1])
-    agent_position.append(mambo_02_position[0])
-    agent_position.append(mambo_02_position[1])
-    agent_position.append(mambo_03_position[0])
-    agent_position.append(mambo_03_position[1])
+    agent_position.append(jackal_position[-2])
+    agent_position.append(jackal_position[-1])
+    agent_position.append(mambo_01_position[-2])
+    agent_position.append(mambo_01_position[-1])
+    agent_position.append(mambo_02_position[-2])
+    agent_position.append(mambo_02_position[-1])
+    agent_position.append(mambo_03_position[-2])
+    agent_position.append(mambo_03_position[-1])
+
+    MyPlot = Simulator(map_width_meter, map_height_meter, map_center, resolution, value_non_obs, value_obs)
 
     all_position = np.vstack((jackal_position, mambo_01_position, mambo_02_position, mambo_03_position))
     MyPlot.plot_paths(all_position, agent_position, target_position, obs_position)

@@ -20,6 +20,7 @@ class FormationSim:
     dimInputs: int  # dimension of inputs
 
     def __init__(self, configDict: dict, targets: [0,0], iniJackal: [0,0,0], iniQuad: [0,0,0], desire: [0,0,0], buildFlag=True, saveFlag=False):
+        self.saveFlag = saveFlag
         self.num_agents = len(iniQuad)
         self.stateTransform = np.array([[1,0,0,0,0,0,0,0,0,0,0,0],
                                         [0,1,0,0,0,0,0,0,0,0,0,0],
@@ -33,8 +34,8 @@ class FormationSim:
         self.targets = targets
         self.reached = 0
         self.numTargets = len(targets)
-        self.offset = 0.1
-        self.hold = 2
+        self.epsilon = 0.01
+        self.hold = 0
 
         self.g = 9.81
         self.m = 0.2
@@ -114,7 +115,10 @@ class FormationSim:
         # v_save = np.zeros((6,1))
 
         # X = np.transpose(X)[-1]
-
+        quad_state_list = timeNow
+        for idx in range(self.num_agents):
+            quad_state_list = np.hstack((quad_state_list, self.x_Quad[idx][0:3], 0, 0, 0, 0, 0, 0, 0, 0, 0))
+        leader_state_list = np.hstack((self.x_Jackal[0], self.x_Jackal[1],0,0))
 
         self.runOnce = lambda stateNow, timeNow, target: self._runOC(self.x_Jackal, timeNow, target)
         # x = np.reshape(X_save[-1], (xn,1))
@@ -132,46 +136,60 @@ class FormationSim:
             JackalStateNext = self.MyJackalSys.discDynFun(self.x_Jackal, uNow)
             # update trajectory
             self.x_Jackal = np.array(JackalStateNext).reshape((1,-1)).flatten()
-
+            leader_state_list = np.vstack((leader_state_list, np.array([self.x_Jackal[0], self.x_Jackal[1], 0, 0])))
 
             # update time
             timeNow += self.dt
-            timeTraj = np.append(timeTraj, timeNow)
 
             if (self.reached < self.numTargets):
-                if ((self.x_Jackal[0] - self.targets[self.reached][0])**2 + (self.x_Jackal[1] - self.targets[self.reached][1])**2 <= self.offset**2):
+                if ((self.x_Jackal[0] - self.targets[self.reached][0])**2 + (self.x_Jackal[1] - self.targets[self.reached][1])**2 <= self.epsilon**2):
                     self.reached += 1
                     if self.reached < self.numTargets:
                         target = self.targets[self.reached]
 
+
+            quad_state = np.zeros((self.num_agents*self.Quad.dimStates+1))
+            quad_state[0] = timeNow   
             for idx in range(self.num_agents):
                 u = -np.matmul(self.K, self.x_Quad[idx] - self.z[idx] - JackalObserved)
                 u = u.tolist()[0]
-
-                # new_v = np.vstack((dx[3:6], dx[9:12]))
-
-                # v_save = np.hstack((v_save, new_v))
 
                 u[0] = u[0] + self.m*self.g
 
                 newX = self.Quad._discDynFun(self.x_Quad[idx], u)
                 for jdx in range(self.Quad.dimStates):
                     self.x_Quad[idx][jdx] = newX[jdx]
+                    quad_state[idx*self.Quad.dimStates+jdx+1] = newX[jdx]
+                
 
-                # t_save = np.hstack((t_save, t_save[-1]+dt))
-                # X_save = np.vstack((X_save, np.transpose(x)))
+            quad_state_list = np.vstack((quad_state_list, quad_state))
 
-            fig1, ax1 = plt.subplots()
-            ax1.plot(self.x_Jackal[0], self.x_Jackal[1], marker = 'o')
+        if self.saveFlag:
             for idx in range(self.num_agents):
-                ax1.plot(self.x_Quad[idx][0], self.x_Quad[idx][1], marker = '^')
-            for idx in range(self.numTargets):
-                ax1.plot(self.targets[idx][0], self.targets[idx][1], marker = '*')
-            ax1.set_xlabel('x (m)')
-            ax1.set_ylabel('y (m)')
-            ax1.set_xlim([-2.5, 2.5])
-            ax1.set_ylim([-2.5, 2.5])
-            plt.show()
+                array_csv = quad_state_list[:,0]
+                array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.Quad.dimStates+1]))
+                array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.Quad.dimStates+2]))
+                filename_csv = os.path.expanduser("~") + "/github/Multi-agent-Formation-Control-With-Human-Guidance/mambo_0" + str(idx+1) + ".csv"
+                np.savetxt(filename_csv, array_csv, delimiter=",")
+            
+            array_csv = quad_state_list[:,0]
+            array_csv = np.vstack((array_csv, leader_state_list[:,0]))
+            array_csv = np.vstack((array_csv, leader_state_list[:,1]))
+            filename_csv = os.path.expanduser("~") + "/github/Multi-agent-Formation-Control-With-Human-Guidance/jackal.csv"
+            np.savetxt(filename_csv, array_csv, delimiter=",")
+
+            # fig1, ax1 = plt.subplots()
+            # ax1.plot(self.x_Jackal[0], self.x_Jackal[1], marker = 'o')
+            # for idx in range(self.num_agents):
+            #     ax1.plot(self.x_Quad[idx][0], self.x_Quad[idx][1], marker = '^')
+            # for idx in range(self.numTargets):
+            #     ax1.plot(self.targets[idx][0], self.targets[idx][1], marker = '*')
+            # ax1.set_xlabel('x (m)')
+            # ax1.set_ylabel('y (m)')
+            # ax1.title('Formation')
+            # ax1.set_xlim([-2.5, 2.5])
+            # ax1.set_ylim([-2.5, 2.5])
+            # plt.show()
 
 
         # fig1, ax1 = plt.subplots(3,1)
