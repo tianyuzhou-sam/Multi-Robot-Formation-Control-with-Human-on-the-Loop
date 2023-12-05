@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from random import randint
 
 
 class Simulator:
@@ -117,7 +116,6 @@ class Simulator:
         if plotFirstFigFlag:
             # the first figure is without the solved path
             realtime_flag = False
-            cluster_legend_flag = False
             path_legend_flag = False
             ax_before = self.create_realtime_plot(realtime_flag, path_legend_flag, legend_flag)
             # plot the map
@@ -129,7 +127,6 @@ class Simulator:
 
         # the second figure is with the solved path
         realtime_flag = False
-        cluster_legend_flag = True
         path_legend_flag = True
         ax = self.create_realtime_plot(realtime_flag, path_legend_flag, legend_flag)
         # plot the map
@@ -164,7 +161,7 @@ class Simulator:
         return ax
 
     def update_realtime_plot(self, path_many_agents: list, agents_position: list,
-                             targets_position: list, ax, legend_flag=True):
+                             targets_position: list, obs_position: list, ax, legend_flag=True):
         """
         Update realtime plotting once in an existing figure. See input details in self.plot_paths()
         """
@@ -178,17 +175,22 @@ class Simulator:
         # plot agents and targets
         self.plot_agents(agents_position, text_offset, ax)
         self.plot_targets(targets_position, text_offset, ax)
-        if path_many_agents:
-            # plot paths
-            self.plot_paths_figure(path_many_agents, agents_position,
-                                   targets_position, ax)
+        # if path_many_agents:
+        #     # plot paths
+        #     self.plot_paths_figure(path_many_agents, agents_position,
+        #                            targets_position, ax)
+        if obs_position is not None:
+            for idx in range(len(obs_position)):
+                obs = patches.Rectangle((obs_position[idx][0], obs_position[idx][1]), obs_position[idx][2], obs_position[idx][3], 
+                                         linewidth=1, edgecolor='black', facecolor='black')
+                ax.add_patch(obs)
         if legend_flag:
             # plot legends
             handles, labels = self.figure_settings(ax, path_legend_flag=True)
             legend = plt.legend(handles, labels, bbox_to_anchor=(1, 1), loc="upper left", framealpha=1)
         plt.draw()
 
-    def plot_agents(self, agents_position: list, text_offset: list, ax, agent_text_flag=True):
+    def plot_agents(self, agents_position: list, text_offset: list, ax, agent_text_flag=False):
         """
         Plot agents.
         """
@@ -201,8 +203,14 @@ class Simulator:
             if agent_text_flag:
                 ax.text(agents_position[2*idx_agent]+text_offset[0], agents_position[2*idx_agent+1]+text_offset[1],
                         "A"+str(idx_agent), fontweight="bold", color=agent_color)
+            if idx_agent >= 1:
+                if idx_agent == 1:
+                    start_idx = int(len(agents_position)/2) - 1
+                else:
+                    start_idx = idx_agent - 1
+                ax.plot([agents_position[2*start_idx],agents_position[2*idx_agent]], [agents_position[2*start_idx+1],agents_position[2*idx_agent+1]], color="y")
 
-    def plot_targets(self, targets_position: list, text_offset: list, ax, target_text_flag=True):
+    def plot_targets(self, targets_position: list, text_offset: list, ax, target_text_flag=False):
         """
         Plot targets.
         """
@@ -241,7 +249,7 @@ class Simulator:
         """
         ax.set_xlabel("x (m)")
         ax.set_ylabel("y (m)")
-        ax.set_title("T = 25s", fontweight='bold')
+        # ax.set_title("T = 25s", fontweight='bold')
         ax.set_xlim([self.map_center[0]-self.map_width_meter/2, self.map_center[0]+self.map_width_meter/2])
         ax.set_ylim([self.map_center[1]-self.map_height_meter/2, self.map_center[1]+self.map_height_meter/2])
 
@@ -257,8 +265,10 @@ class Simulator:
                 # add legend about path
                 handles.append(plt.plot([],[], linestyle="solid", color="red", linewidth=2)[0])
                 handles.append(plt.plot([],[], linestyle="solid", color="blue", linewidth=2)[0])
+                handles.append(plt.plot([],[], linestyle="solid", color="y")[0])
                 handles.append(plt.plot([],[], marker="s", color="black", ls="none")[0])
-                labels.extend(["Path", "Path", "Obstacles"])
+                # labels.extend(["Path", "Path", "Obstacles"])
+                labels.extend(["Path", "Path", "Formation", "Obstacles"])
                 # a tuple includes the handles and labels of legend
         else:
             handles = list()
@@ -280,8 +290,6 @@ if __name__ == '__main__':
     agent_position = [0,0, 0,0, 0,0, 0,0]
     obs_position = [[-0.65-obs_size,-0.28-5*obs_size,obs_size,5*obs_size], [0.73,-0.60,obs_size,5*obs_size]]
 
-    
-
     if simulationFlag:
         jackal_data = np.genfromtxt('jackal.csv', delimiter=',')
         mambo_01_data = np.genfromtxt('mambo_01.csv', delimiter=',')
@@ -301,30 +309,50 @@ if __name__ == '__main__':
     mambo_03_position = []
 
     case = 0
+    delay = 5
 
-    if case == 0:
-        plotLength = len(jackal_data[0])        # 25s
-    elif case == 1:
-        plotLength = 1          # 0s
-    elif case == 2:
-        plotLength = 50         # 5s
-    elif case == 3:
-        plotLength = 70         # 7s   
-    elif case == 4:
-        plotLength = 100        # 10s 
-    elif case == 5:
-        plotLength = 200        # 20s   
+    if simulationFlag:
+        if case == 0:
+            plotLength = len(jackal_data[0])        # 25s
+        elif case == 1:
+            plotLength = 1          # 0s
+        elif case == 2:
+            plotLength = 50         # 5s
+        elif case == 3:
+            plotLength = 70         # 7s   
+        elif case == 4:
+            plotLength = 100        # 10s 
+        elif case == 5:
+            plotLength = 200        # 20s   
+    else:
+        if case == 0:
+            plotLength = len(jackal_data[0])        # 45s
+        elif case == 1:
+            plotLength = 1          # 0s
+        elif case == 2:
+            plotLength = 90         # 18s
+        elif case == 3:
+            plotLength = 150        # 30s
+
 
 
     for idx in range(plotLength):
         jackal_position.append(jackal_data[1][idx])
         jackal_position.append(jackal_data[2][idx])
-        mambo_01_position.append(mambo_01_data[1][idx])
-        mambo_01_position.append(mambo_01_data[2][idx])
-        mambo_02_position.append(mambo_02_data[1][idx])
-        mambo_02_position.append(mambo_02_data[2][idx])
-        mambo_03_position.append(mambo_03_data[1][idx])
-        mambo_03_position.append(mambo_03_data[2][idx])
+        if idx >= delay and not (case == 0 or case == 1):
+            mambo_01_position.append(mambo_01_data[1][idx-delay])
+            mambo_01_position.append(mambo_01_data[2][idx-delay])
+            mambo_02_position.append(mambo_02_data[1][idx-delay])
+            mambo_02_position.append(mambo_02_data[2][idx-delay])
+            mambo_03_position.append(mambo_03_data[1][idx-delay])
+            mambo_03_position.append(mambo_03_data[2][idx-delay])
+        else :
+            mambo_01_position.append(mambo_01_data[1][idx])
+            mambo_01_position.append(mambo_01_data[2][idx])
+            mambo_02_position.append(mambo_02_data[1][idx])
+            mambo_02_position.append(mambo_02_data[2][idx])
+            mambo_03_position.append(mambo_03_data[1][idx])
+            mambo_03_position.append(mambo_03_data[2][idx])
 
     agent_position = []
     agent_position.append(jackal_position[-2])
@@ -335,6 +363,7 @@ if __name__ == '__main__':
     agent_position.append(mambo_02_position[-1])
     agent_position.append(mambo_03_position[-2])
     agent_position.append(mambo_03_position[-1])
+
 
     MyPlot = Simulator(map_width_meter, map_height_meter, map_center, resolution, value_non_obs, value_obs)
 

@@ -11,12 +11,18 @@ class QuadSys:
     dimStates: int  # dimension of states
     dimInputs: int  # dimension of inputs
 
-    def __init__(self, configDict: dict, g:9.81, m:0, Ixx:0, Iyy:0, Izz:0):
+    def __init__(self, configDict: dict):
         self.configDict = configDict
         self.dt = float(self.configDict["dt"])
         self.strLib = "QuadSys"
         self.prefixBuild = "build/"
         buildFlag = False
+
+        self.g = 9.81 
+        self.m = 0.068
+        self.Ix = 6.86E-5
+        self.Iy = 9.2E-5 
+        self.Iz = 13.66E-5
 
         self.dimStates = 12
         self.dimInputs = 4
@@ -42,15 +48,15 @@ class QuadSys:
         _contDyn[0, 0] = states[3]
         _contDyn[1, 0] = states[4]
         _contDyn[2, 0] = states[5]
-        _contDyn[3, 0] = inputs[0]/m*(np.cos(states[6])*np.sin(states[7])*np.cos(states[8]) + np.sin(states[6])*np.sin(states[8]))
-        _contDyn[4, 0] = inputs[0]/m*(np.cos(states[6])*np.sin(states[7])*np.sin(states[8]) - np.sin(states[6])*np.cos(states[8]))
-        _contDyn[5, 0] = (inputs[0]/m*(np.cos(states[6])*np.cos(states[7])) - g)
+        _contDyn[3, 0] = inputs[0]/self.m*(np.cos(states[6])*np.sin(states[7])*np.cos(states[8]) + np.sin(states[6])*np.sin(states[8]))
+        _contDyn[4, 0] = inputs[0]/self.m*(np.cos(states[6])*np.sin(states[7])*np.sin(states[8]) - np.sin(states[6])*np.cos(states[8]))
+        _contDyn[5, 0] = inputs[0]/self.m*(np.cos(states[6])*np.cos(states[7])) - self.g
         _contDyn[6, 0] = states[9]
         _contDyn[7, 0] = states[10]
         _contDyn[8, 0] = states[11]
-        _contDyn[9, 0] = (Iyy-Izz)/Ixx*states[10]*states[11]+inputs[1]/Ixx
-        _contDyn[10, 0] = (Izz-Ixx)/Iyy*states[11]*states[9]+inputs[2]/Iyy
-        _contDyn[11, 0] = (Ixx-Iyy)/Izz*states[9]*states[10]+inputs[3]/Izz
+        _contDyn[9, 0] = (self.Iy-self.Iz)/self.Ix*states[10]*states[11]+inputs[1]/self.Ix
+        _contDyn[10, 0] = (self.Iz-self.Ix)/self.Iy*states[11]*states[9]+inputs[2]/self.Iy
+        _contDyn[11, 0] = (self.Ix-self.Iy)/self.Iz*states[9]*states[10]+inputs[3]/self.Iz
 
 
         _discDyn = states + self.dt * _contDyn

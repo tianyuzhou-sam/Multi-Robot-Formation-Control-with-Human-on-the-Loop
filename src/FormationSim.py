@@ -5,6 +5,7 @@ from numpy.linalg import inv
 from numpy import linalg as LA
 from scipy import integrate
 import scipy
+from random import random
 import matplotlib.pyplot as plt
 import csv
 import os
@@ -13,13 +14,14 @@ import time
 from JackalSys import JackalSys
 from OptimalControlJackal import OptimalControlJackal
 from QuadSys import QuadSys
+from plot_traj import Simulator
 
 class FormationSim:
     configDict: dict  # a dictionary for parameters
     dimStates: int  # dimension of states
     dimInputs: int  # dimension of inputs
 
-    def __init__(self, configDict: dict, targets: [0,0], iniJackal: [0,0,0], iniQuad: [0,0,0], desire: [0,0,0], buildFlag=True, saveFlag=False):
+    def __init__(self, configDict: dict, targets: [0,0], iniJackal: [0,0,0], iniQuad: [0,0,0], desire: [[0,0,0]], t_change: np.inf, buildFlag=True, saveFlag=False):
         self.saveFlag = saveFlag
         self.num_agents = len(iniQuad)
         self.stateTransform = np.array([[1,0,0,0,0,0,0,0,0,0,0,0],
@@ -30,6 +32,9 @@ class FormationSim:
         self.dt = configDict['dt']
         self.MyJackalSys = JackalSys(configDict, buildFlag)
         self.Jackal = OptimalControlJackal(configDict, self.MyJackalSys, buildFlag)
+        self.maxTime = 0
+
+        self.noiseAmp = 0.1
 
         self.targets = targets
         self.reached = 0
@@ -37,13 +42,13 @@ class FormationSim:
         self.epsilon = 0.01
         self.hold = 0
 
-        self.g = 9.81
-        self.m = 0.2
-        self.Ix = 8.1 * 1e-3
-        self.Iy = 8.1 * 1e-3
-        self.Iz = 14.2 * 1e-3
+        self.Quad = QuadSys(configDict)
 
-        self.Quad = QuadSys(configDict, self.g, self.m, self.Ix, self.Iy, self.Iz)
+        self.g = self.Quad.g
+        self.m = self.Quad.m
+        self.Ix = self.Quad.Ix
+        self.Iy = self.Quad.Iy
+        self.Iz = self.Quad.Iz
 
         self.x_Jackal = iniJackal
 
@@ -53,11 +58,22 @@ class FormationSim:
             self.x_Quad[idx][1] = iniQuad[idx][1]
             self.x_Quad[idx][2] = iniQuad[idx][2]
 
+        self.t_change = t_change
+        self.nextChange = self.t_change
+        self.formation_idx = 0
+        self.desire = desire
         self.z = np.zeros((self.num_agents, self.Quad.dimStates))
-        for idx in range(self.num_agents):
-            self.z[idx][0] = desire[idx][0]
-            self.z[idx][1] = desire[idx][1]
-            self.z[idx][2] = desire[idx][2]
+        if t_change is np.inf:
+            for idx in range(self.num_agents):
+                self.z[idx][0] = desire[idx][0]
+                self.z[idx][1] = desire[idx][1]
+                self.z[idx][2] = desire[idx][2]
+        else:
+            for idx in range(self.num_agents):
+                self.nextChange = self.t_change[0]
+                self.z[idx][0] = desire[self.formation_idx][idx][0]
+                self.z[idx][1] = desire[self.formation_idx][idx][1]
+                self.z[idx][2] = desire[self.formation_idx][idx][2]
 
 
         self.A = np.array([[0,0,0,1,0,0,0,0,0,0,0,0],
@@ -96,18 +112,12 @@ class FormationSim:
         P = np.matrix(scipy.linalg.solve_discrete_are(self.Ad, self.Bd, self.Q, self.R))
         self.K = np.matrix(np.matmul(scipy.linalg.inv(self.R + self.Bd.T*P*self.Bd),self.Bd.T)*P*self.Ad)
 
-
+        self.MySimulator = Simulator
 
     def run(self):
-
-
         u = np.zeros((self.Quad.dimInputs, 1))
 
-        # X_save = np.transpose(x0)
-
-        # X = x0
-        # X = np.vstack((X, np.transpose(np.kron(np.transpose(x0), np.transpose(x0)))))
-        # X = np.vstack((X, np.kron(x0, np.zeros((un, 1)))))
+        ax = self.MySimulator.create_realtime_plot(realtime_flag=True, cluster_legend_flag=True, path_legend_flag=True)
 
         timeNow = 0.0
         timeTraj = np.array([timeNow], dtype=np.float64)
@@ -121,8 +131,7 @@ class FormationSim:
         leader_state_list = np.hstack((self.x_Jackal[0], self.x_Jackal[1],0,0))
 
         self.runOnce = lambda stateNow, timeNow, target: self._runOC(self.x_Jackal, timeNow, target)
-        # x = np.reshape(X_save[-1], (xn,1))
-        while (self.reached < self.numTargets):    
+        while (self.reached < self.numTargets) or timeNow <= self.maxTime:    
 
             # solve
             if timeNow > self.hold:
@@ -131,6 +140,7 @@ class FormationSim:
                 uNow = [0,0]
 
             JackalObserved = [self.x_Jackal[0], self.x_Jackal[1], 0, uNow[0]*np.cos(self.x_Jackal[2]), uNow[0]*np.sin(self.x_Jackal[2]), 0, 0, 0, 0, 0, 0, 0]
+            # JackalObserved = [self.x_Jackal[0] + self.noiseAmp*(random()-0.5), self.x_Jackal[1] + self.noiseAmp*(random()-0.5), 0, uNow[0]*np.cos(self.x_Jackal[2]), uNow[0]*np.sin(self.x_Jackal[2]), 0, 0, 0, 0, 0, 0, 0]
             
             # apply control and forward propagate dynamics
             JackalStateNext = self.MyJackalSys.discDynFun(self.x_Jackal, uNow)
@@ -164,19 +174,13 @@ class FormationSim:
 
             quad_state_list = np.vstack((quad_state_list, quad_state))
 
-        if self.saveFlag:
-            for idx in range(self.num_agents):
-                array_csv = quad_state_list[:,0]
-                array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.Quad.dimStates+1]))
-                array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.Quad.dimStates+2]))
-                filename_csv = os.path.expanduser("~") + "/github/Multi-agent-Formation-Control-With-Human-Guidance/mambo_0" + str(idx+1) + ".csv"
-                np.savetxt(filename_csv, array_csv, delimiter=",")
-            
-            array_csv = quad_state_list[:,0]
-            array_csv = np.vstack((array_csv, leader_state_list[:,0]))
-            array_csv = np.vstack((array_csv, leader_state_list[:,1]))
-            filename_csv = os.path.expanduser("~") + "/github/Multi-agent-Formation-Control-With-Human-Guidance/jackal.csv"
-            np.savetxt(filename_csv, array_csv, delimiter=",")
+            if timeNow >= self.nextChange:
+                self.formation_idx += 1
+                self.nextChange = self.t_change[self.formation_idx]
+                for idx in range(self.num_agents):
+                    self.z[idx][0] = self.desire[self.formation_idx][idx][0]
+                    self.z[idx][1] = self.desire[self.formation_idx][idx][1]
+                    self.z[idx][2] = self.desire[self.formation_idx][idx][2]
 
             # fig1, ax1 = plt.subplots()
             # ax1.plot(self.x_Jackal[0], self.x_Jackal[1], marker = 'o')
@@ -186,10 +190,27 @@ class FormationSim:
             #     ax1.plot(self.targets[idx][0], self.targets[idx][1], marker = '*')
             # ax1.set_xlabel('x (m)')
             # ax1.set_ylabel('y (m)')
-            # ax1.title('Formation')
+            # ax1.set_title('Formation')
             # ax1.set_xlim([-2.5, 2.5])
             # ax1.set_ylim([-2.5, 2.5])
             # plt.show()
+
+        if self.saveFlag:
+            for idx in range(self.num_agents):
+                array_csv = quad_state_list[:,0]
+                array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.Quad.dimStates+1]))
+                array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.Quad.dimStates+2]))
+                array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.Quad.dimStates+3]))
+                filename_csv = os.path.expanduser("~") + "/github/Multi-agent-Formation-Control-With-Human-Guidance/mambo_0" + str(idx+1) + ".csv"
+                np.savetxt(filename_csv, array_csv, delimiter=",")
+            
+            array_csv = quad_state_list[:,0]
+            array_csv = np.vstack((array_csv, leader_state_list[:,0]))
+            array_csv = np.vstack((array_csv, leader_state_list[:,1]))
+            filename_csv = os.path.expanduser("~") + "/github/Multi-agent-Formation-Control-With-Human-Guidance/jackal.csv"
+            np.savetxt(filename_csv, array_csv, delimiter=",")
+
+            
 
 
         # fig1, ax1 = plt.subplots(3,1)
