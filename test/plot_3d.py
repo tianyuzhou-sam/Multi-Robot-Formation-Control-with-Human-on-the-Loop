@@ -14,7 +14,7 @@ value_non_obs = 0
 value_obs = 255
 obs_size = 0.26
 
-simulationFlag = True
+simulationFlag = False
 
 agent_position = [0,0,0, 0,0,0, 0,0,0, 0,0,0]
 obs_position = [[-0.65-obs_size,-0.28-5*obs_size,obs_size,5*obs_size], [0.73,-0.60,obs_size,5*obs_size]]
@@ -26,16 +26,22 @@ if simulationFlag:
     mambo_03_data = np.genfromtxt('mambo_03.csv', delimiter=',')
     waypoints = [[-0.5,0.5], [0.8,-1.35], [2,0]]
 else:
-    jackal_data = np.genfromtxt('experiment/traj/run18/jackal.csv', delimiter=',')
-    mambo_01_data = np.genfromtxt('experiment/traj/run18/mambo_01.csv', delimiter=',')
-    mambo_02_data = np.genfromtxt('experiment/traj/run18/mambo_02.csv', delimiter=',')
-    mambo_03_data = np.genfromtxt('experiment/traj/run18/mambo_03.csv', delimiter=',')
-    waypoints = [[-0.5,0.25], [0.9,-1.3], [1.9,0.0]]
+    # jackal_data = np.genfromtxt('experiment/traj/run18/jackal.csv', delimiter=',')
+    # mambo_01_data = np.genfromtxt('experiment/traj/run18/mambo_01.csv', delimiter=',')
+    # mambo_02_data = np.genfromtxt('experiment/traj/run18/mambo_02.csv', delimiter=',')
+    # mambo_03_data = np.genfromtxt('experiment/traj/run18/mambo_03.csv', delimiter=',')
+    # waypoints = [[-0.5,0.25], [0.9,-1.3], [1.9,0.0]]
 
-    jackal_data_ref = np.genfromtxt('experiment/traj_records/jackal.csv', delimiter=',')
-    mambo_01_data_ref = np.genfromtxt('experiment/traj_records/mambo_01.csv', delimiter=',')
-    mambo_02_data_ref = np.genfromtxt('experiment/traj_records/mambo_02.csv', delimiter=',')
-    mambo_03_data_ref = np.genfromtxt('experiment/traj_records/mambo_03.csv', delimiter=',')
+    # jackal_data_ref = np.genfromtxt('experiment/traj_records/jackal.csv', delimiter=',')
+    # mambo_01_data_ref = np.genfromtxt('experiment/traj_records/mambo_01.csv', delimiter=',')
+    # mambo_02_data_ref = np.genfromtxt('experiment/traj_records/mambo_02.csv', delimiter=',')
+    # mambo_03_data_ref = np.genfromtxt('experiment/traj_records/mambo_03.csv', delimiter=',')
+
+    jackal_data = np.genfromtxt('experiment/traj_records/jackal.csv', delimiter=',')
+    mambo_01_data = np.genfromtxt('experiment/traj_records/mambo_01.csv', delimiter=',')
+    mambo_02_data = np.genfromtxt('experiment/traj_records/mambo_02.csv', delimiter=',')
+    mambo_03_data = np.genfromtxt('experiment/traj_records/mambo_03.csv', delimiter=',')
+    waypoints = [[-0.5,0.25], [0.9,-1.3], [1.9,0.0]]
 
 jackal_position = []
 mambo_01_position = []

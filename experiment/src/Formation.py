@@ -75,14 +75,16 @@ class FormationPlanner:
         self.epsilon = 10e-3
 
         # flying time
-        fly_time = 50
+        fly_time = 100
 
-
-        self.g = 9.81
-        self.m = 0.2
-        self.Ix = 8.1 * 1e-3
-        self.Iy = 8.1 * 1e-3
-        self.Iz = 14.2 * 1e-3
+        configDict = {"dt": self.dt, "stepNumHorizon": 10, "startPointMethod": "zeroInput"}
+        
+        self.MyQuad = QuadSys(configDict)
+        self.g = self.MyQuad.g
+        self.m = self.MyQuad.m
+        self.Ix = self.MyQuad.Ix
+        self.Iy = self.MyQuad.Iy
+        self.Iz = self.MyQuad.Iz
         self.A = np.array([[0,0,0,1,0,0,0,0,0,0,0,0],
                            [0,0,0,0,1,0,0,0,0,0,0,0],
                            [0,0,0,0,0,1,0,0,0,0,0,0],
@@ -109,10 +111,6 @@ class FormationPlanner:
                            [0,0,1/self.Iy,0],
                            [0,0,0,1/self.Iz]])
         
-
-        configDict = {"dt": self.dt, "stepNumHorizon": 10, "startPointMethod": "zeroInput"}
-        self.MyQuad = QuadSys(configDict, self.g, self.m, self.Ix, self.Iy, self.Iz)
-
         
         # dimension of group matrices
         self.dim_xn = len(self.B)                          # single agent
