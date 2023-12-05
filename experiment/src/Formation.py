@@ -77,14 +77,12 @@ class FormationPlanner:
         # flying time
         fly_time = 50
 
-        configDict = {"dt": self.dt, "stepNumHorizon": 10, "startPointMethod": "zeroInput"}
-        self.MyQuad = QuadSys(configDict)
 
-        self.g = self.Quad.g
-        self.m = self.Quad.m
-        self.Ix = self.Quad.Ix
-        self.Iy = self.Quad.Iy
-        self.Iz = self.Quad.Iz
+        self.g = 9.81
+        self.m = 0.2
+        self.Ix = 8.1 * 1e-3
+        self.Iy = 8.1 * 1e-3
+        self.Iz = 14.2 * 1e-3
         self.A = np.array([[0,0,0,1,0,0,0,0,0,0,0,0],
                            [0,0,0,0,1,0,0,0,0,0,0,0],
                            [0,0,0,0,0,1,0,0,0,0,0,0],
@@ -110,6 +108,10 @@ class FormationPlanner:
                            [0,1/self.Ix,0,0],
                            [0,0,1/self.Iy,0],
                            [0,0,0,1/self.Iz]])
+        
+
+        configDict = {"dt": self.dt, "stepNumHorizon": 10, "startPointMethod": "zeroInput"}
+        self.MyQuad = QuadSys(configDict, self.g, self.m, self.Ix, self.Iy, self.Iz)
 
         
         # dimension of group matrices
@@ -177,6 +179,10 @@ class FormationPlanner:
             quad_state_list = np.hstack((quad_state_list, agents_position_list[idx][0:3], 0, 0, 0, 0, 0, 0, 0, 0, 0))
         target_state_list = np.hstack((target_position[0], target_position[1],0,0))
 
+        record_list = time.time() - time_begin
+        for idx in range(self.num_agents):
+            record_list = np.hstack((record_list, agents_position_list[idx][0:3]))
+
         time_start_fly = time.time()
         while(time_used < fly_time):
             t_start = time.time()
@@ -188,7 +194,7 @@ class FormationPlanner:
             target_position = await self.update_target_mocap()
 
             # do formation
-            quad_state_list, target_state_list = self.formation(time_begin, agents_position_list, target_state_list, target_position, quad_state_list)
+            quad_state_list, target_state_list, record_list = self.formation(time_begin, agents_position_list, target_state_list, target_position, quad_state_list, record_list)
 
             # plt.pause(1E-9)
             time_sleep = max(0, self.dt - time.time() + t_start)
@@ -197,7 +203,7 @@ class FormationPlanner:
             await asyncio.sleep(time_sleep)
 
 
-    def formation(self, time_begin, agents_position_list, target_state_list, target_position, quad_state_list):
+    def formation(self, time_begin, agents_position_list, target_state_list, target_position, quad_state_list, record_list):
 
         old_target_v = np.zeros((2))
 
@@ -228,17 +234,29 @@ class FormationPlanner:
         quad_state_list = np.vstack((quad_state_list, quad_state))
         target_state_list = np.vstack((target_state_list, np.hstack((target_position[0], target_position[1], old_target_v[0], old_target_v[1]))))
 
-        self.save_Traj(time_begin, quad_state_list, target_state_list)
-        return quad_state_list, target_state_list
+        record = time.time() - time_begin
+        for idx in range(self.num_agents):
+            record = np.hstack((record, agents_position_list[idx][0:3]))
+        record_list = np.vstack((record_list, record))
+
+        self.save_Traj(time_begin, quad_state_list, target_state_list, record_list)
+        return quad_state_list, target_state_list, record_list
         
 
-    def save_Traj(self, time_begin, quad_state_list, target_state_list):
+    def save_Traj(self, time_begin, quad_state_list, target_state_list, record_list):
         for idx in range(self.num_agents):
             # output trajectories as a CSV file
             array_csv = quad_state_list[:,0]
             array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.dim_xn+1], quad_state_list[:,idx*self.dim_xn+2], quad_state_list[:,idx*self.dim_xn+3]))
             array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.dim_xn+4], quad_state_list[:,idx*self.dim_xn+5], quad_state_list[:,idx*self.dim_xn+6]))
             filename_csv = os.path.expanduser("~") + "/tianyu/Mambo-Tracking-Interface" + self.config_data_list[idx]["DIRECTORY_TRAJ"] + self.time_name + ".csv"
+            np.savetxt(filename_csv, array_csv, delimiter=",")
+        
+        for idx in range(self.num_agents):
+            # output trajectories as a CSV file
+            array_csv = quad_state_list[:,0]
+            array_csv = np.vstack((array_csv, record_list[:,idx*3+1], record_list[:,idx*3+2], record_list[:,idx*3+3]))
+            filename_csv = os.path.expanduser("~") + "/tianyu/Mambo-Tracking-Interface/mambo_0" + str(idx+1) + ".csv"
             np.savetxt(filename_csv, array_csv, delimiter=",")
         
         array_csv = quad_state_list[:,0]

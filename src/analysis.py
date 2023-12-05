@@ -3,11 +3,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 desire = [[0.25,0,1],[-0.25,0.5,1],[-0.25,-0.5,1]]
-
 jackal_data = np.genfromtxt('jackal.csv', delimiter=',')
 mambo_01_data = np.genfromtxt('mambo_01.csv', delimiter=',')
 mambo_02_data = np.genfromtxt('mambo_02.csv', delimiter=',')
 mambo_03_data = np.genfromtxt('mambo_03.csv', delimiter=',')
+
+# desire = [[0.5,0,1],[-0.,0.75,1],[-0.,-0.75,1]]
+# jackal_data = np.genfromtxt('experiment/traj/run18/jackal.csv', delimiter=',')
+# mambo_01_data = np.genfromtxt('experiment/traj/run18/mambo_01.csv', delimiter=',')
+# mambo_02_data = np.genfromtxt('experiment/traj/run18/mambo_02.csv', delimiter=',')
+# mambo_03_data = np.genfromtxt('experiment/traj/run18/mambo_03.csv', delimiter=',')
+
 target_position = [-0.5,0.5, 0.8,-1.35, 2,0]
 
 ref = np.zeros((9, len(jackal_data[0])))
@@ -28,7 +34,7 @@ for idx in range(len(jackal_data[0])):
 
 fig, ax = plt.subplots()
 ax.plot(jackal_data[0], error[0], color="blue", label='Agent 1')
-ax.plot(jackal_data[0], error[1], color="yellow", label='Agent 2')
+ax.plot(jackal_data[0], error[1], color="green", label='Agent 2')
 ax.plot(jackal_data[0], error[2], color="red", linestyle="dashed", label='Agent 3')
 ax.set_xlabel('time (s)')
 ax.set_ylabel('distance error (m)')

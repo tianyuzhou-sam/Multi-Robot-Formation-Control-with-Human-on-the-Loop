@@ -26,36 +26,57 @@ if simulationFlag:
     mambo_03_data = np.genfromtxt('mambo_03.csv', delimiter=',')
     waypoints = [[-0.5,0.5], [0.8,-1.35], [2,0]]
 else:
-    jackal_data = np.genfromtxt('experiment/traj_records/jackal.csv', delimiter=',')
-    mambo_01_data = np.genfromtxt('experiment/traj_records/mambo_01.csv', delimiter=',')
-    mambo_02_data = np.genfromtxt('experiment/traj_records/mambo_02.csv', delimiter=',')
-    mambo_03_data = np.genfromtxt('experiment/traj_records/mambo_03.csv', delimiter=',')
+    jackal_data = np.genfromtxt('experiment/traj/run18/jackal.csv', delimiter=',')
+    mambo_01_data = np.genfromtxt('experiment/traj/run18/mambo_01.csv', delimiter=',')
+    mambo_02_data = np.genfromtxt('experiment/traj/run18/mambo_02.csv', delimiter=',')
+    mambo_03_data = np.genfromtxt('experiment/traj/run18/mambo_03.csv', delimiter=',')
     waypoints = [[-0.5,0.25], [0.9,-1.3], [1.9,0.0]]
+
+    jackal_data_ref = np.genfromtxt('experiment/traj_records/jackal.csv', delimiter=',')
+    mambo_01_data_ref = np.genfromtxt('experiment/traj_records/mambo_01.csv', delimiter=',')
+    mambo_02_data_ref = np.genfromtxt('experiment/traj_records/mambo_02.csv', delimiter=',')
+    mambo_03_data_ref = np.genfromtxt('experiment/traj_records/mambo_03.csv', delimiter=',')
 
 jackal_position = []
 mambo_01_position = []
 mambo_02_position = []
 mambo_03_position = []
 
+mambo_01_position_ref = []
+mambo_02_position_ref = []
+mambo_03_position_ref = []
 
 obs_size = 0.26
 obs_position = [[-0.65-obs_size,-0.28-5*obs_size,obs_size,5*obs_size], [0.73,-0.60,obs_size,5*obs_size]]
 
 plotLength = len(jackal_data[0])        # 25s
+plotskip = 1
 
-for idx in range(plotLength):
-    jackal_position.append(jackal_data[1][idx])
-    jackal_position.append(jackal_data[2][idx])
+for idx in range(int(plotLength/plotskip)):
+    jackal_position.append(jackal_data[1][idx*plotskip])
+    jackal_position.append(jackal_data[2][idx*plotskip])
     jackal_position.append(0)
-    mambo_01_position.append(mambo_01_data[1][idx])
-    mambo_01_position.append(mambo_01_data[2][idx])
-    mambo_01_position.append(mambo_01_data[3][idx])
-    mambo_02_position.append(mambo_02_data[1][idx])
-    mambo_02_position.append(mambo_02_data[2][idx])
-    mambo_02_position.append(mambo_02_data[3][idx])
-    mambo_03_position.append(mambo_03_data[1][idx])
-    mambo_03_position.append(mambo_03_data[2][idx])
-    mambo_03_position.append(mambo_03_data[3][idx])
+    mambo_01_position.append(mambo_01_data[1][idx*plotskip])
+    mambo_01_position.append(mambo_01_data[2][idx*plotskip])
+    mambo_01_position.append(mambo_01_data[3][idx*plotskip])
+    mambo_02_position.append(mambo_02_data[1][idx*plotskip])
+    mambo_02_position.append(mambo_02_data[2][idx*plotskip])
+    mambo_02_position.append(mambo_02_data[3][idx*plotskip])
+    mambo_03_position.append(mambo_03_data[1][idx*plotskip])
+    mambo_03_position.append(mambo_03_data[2][idx*plotskip])
+    mambo_03_position.append(mambo_03_data[3][idx*plotskip])
+
+# for idx in range(plotLength):
+#     mambo_01_position_ref.append(mambo_01_data_ref[1][idx])
+#     mambo_01_position_ref.append(mambo_01_data_ref[2][idx])
+#     mambo_01_position_ref.append(mambo_01_data_ref[3][idx])
+#     mambo_02_position_ref.append(mambo_02_data_ref[1][idx])
+#     mambo_02_position_ref.append(mambo_02_data_ref[2][idx])
+#     mambo_02_position_ref.append(mambo_02_data_ref[3][idx])
+#     mambo_03_position_ref.append(mambo_03_data_ref[1][idx])
+#     mambo_03_position_ref.append(mambo_03_data_ref[2][idx])
+#     mambo_03_position_ref.append(mambo_03_data_ref[3][idx])
+
 
 agent_position = []
 agent_position.append(jackal_position[-3])
@@ -83,6 +104,9 @@ ax.plot(jackal_position[0::3], jackal_position[1::3], jackal_position[2::3], col
 ax.plot(mambo_01_position[0::3], mambo_01_position[1::3], mambo_01_position[2::3], color='blue')
 ax.plot(mambo_02_position[0::3], mambo_02_position[1::3], mambo_02_position[2::3], color='blue')
 ax.plot(mambo_03_position[0::3], mambo_03_position[1::3], mambo_03_position[2::3], color='blue')
+# ax.plot(mambo_01_position_ref[0::3], mambo_01_position_ref[1::3], mambo_01_position_ref[2::3], color='green')
+# ax.plot(mambo_02_position_ref[0::3], mambo_02_position_ref[1::3], mambo_02_position_ref[2::3], color='green')
+# ax.plot(mambo_03_position_ref[0::3], mambo_03_position_ref[1::3], mambo_03_position_ref[2::3], color='green')
 ax.scatter(agent_position[0], agent_position[1], agent_position[2], color='red', label='Leader')
 ax.scatter(agent_position[3], agent_position[4], agent_position[5], color='blue', label='Agents')
 ax.scatter(agent_position[6], agent_position[7], agent_position[8], color='blue')
