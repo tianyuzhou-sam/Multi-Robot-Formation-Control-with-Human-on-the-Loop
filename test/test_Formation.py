@@ -12,13 +12,13 @@ from FormationSim import FormationSim
 configDict = {"dt": 0.1, "stepNumHorizon": 10, "startPointMethod": "zeroInput"}
 
 buildFlag = True
-saveFlag = Fasle
+saveFlag = False
 multipleFormation = False
 
 iniJackal = [-2,0,0]
 iniQuad = [[-2.5,0.5,0],[-2.5,1,0],[-2.5,-1,0]]
 
-desire = [[0.25,0,1],[-0.25,0.5,1],[-0.25,-0.5,1]]
+desire = [[0.25,0,0.8],[-0.25,0.5,1],[-0.25,-0.5,1]]
 t_change = np.inf
 
 if multipleFormation:

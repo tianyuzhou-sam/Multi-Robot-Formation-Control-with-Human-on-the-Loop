@@ -249,7 +249,7 @@ class Simulator:
         """
         ax.set_xlabel("x (m)")
         ax.set_ylabel("y (m)")
-        # ax.set_title("T = 25s", fontweight='bold')
+        ax.set_title("T = 25s", fontweight='bold')
         ax.set_xlim([self.map_center[0]-self.map_width_meter/2, self.map_center[0]+self.map_width_meter/2])
         ax.set_ylim([self.map_center[1]-self.map_height_meter/2, self.map_center[1]+self.map_height_meter/2])
 
@@ -257,7 +257,7 @@ class Simulator:
         if legend_flag:
             colors = ["red", "blue", "red"]
             marker_list = ["o", "o", "*"]
-            labels = ["Leader", "Agent", "Waypoint"]
+            labels = ["Leader", "Quadrotors", "Waypoints"]
             f = lambda m,c: plt.plot([],[],marker=m, color=c, ls="none")[0]
             handles = [f(marker_list[i], colors[i]) for i in range(len(labels))]
 
@@ -291,10 +291,10 @@ if __name__ == '__main__':
     obs_position = [[-0.65-obs_size,-0.28-5*obs_size,obs_size,5*obs_size], [0.73,-0.60,obs_size,5*obs_size]]
 
     if simulationFlag:
-        jackal_data = np.genfromtxt('jackal.csv', delimiter=',')
-        mambo_01_data = np.genfromtxt('mambo_01.csv', delimiter=',')
-        mambo_02_data = np.genfromtxt('mambo_02.csv', delimiter=',')
-        mambo_03_data = np.genfromtxt('mambo_03.csv', delimiter=',')
+        jackal_data = np.genfromtxt('jackal_1.csv', delimiter=',')
+        mambo_01_data = np.genfromtxt('mambo_01_1.csv', delimiter=',')
+        mambo_02_data = np.genfromtxt('mambo_02_1.csv', delimiter=',')
+        mambo_03_data = np.genfromtxt('mambo_03_1.csv', delimiter=',')
         target_position = [-0.5,0.5, 0.8,-1.35, 2,0]
     else:
         jackal_data = np.genfromtxt('experiment/traj_records/jackal.csv', delimiter=',')

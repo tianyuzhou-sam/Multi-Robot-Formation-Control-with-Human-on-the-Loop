@@ -112,12 +112,12 @@ class FormationSim:
         P = np.matrix(scipy.linalg.solve_discrete_are(self.Ad, self.Bd, self.Q, self.R))
         self.K = np.matrix(np.matmul(scipy.linalg.inv(self.R + self.Bd.T*P*self.Bd),self.Bd.T)*P*self.Ad)
 
-        self.MySimulator = Simulator
+        # self.MySimulator = Simulator
 
     def run(self):
         u = np.zeros((self.Quad.dimInputs, 1))
 
-        ax = self.MySimulator.create_realtime_plot(realtime_flag=True, cluster_legend_flag=True, path_legend_flag=True)
+        # ax = self.MySimulator.create_realtime_plot(realtime_flag=True, cluster_legend_flag=True, path_legend_flag=True)
 
         timeNow = 0.0
         timeTraj = np.array([timeNow], dtype=np.float64)
