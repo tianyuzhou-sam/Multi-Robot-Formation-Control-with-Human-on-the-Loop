@@ -3,10 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 desire = [[0.25,0,1],[-0.25,0.5,1],[-0.25,-0.5,1]]
-jackal_data = np.genfromtxt('jackal_1_long.csv', delimiter=',')
-mambo_01_data = np.genfromtxt('mambo_01_1_long.csv', delimiter=',')
-mambo_02_data = np.genfromtxt('mambo_02_1_long.csv', delimiter=',')
-mambo_03_data = np.genfromtxt('mambo_03_1_long.csv', delimiter=',')
+jackal_data = np.genfromtxt('data/jackal_long.csv', delimiter=',')
+mambo_01_data = np.genfromtxt('data/mambo_01_long.csv', delimiter=',')
+mambo_02_data = np.genfromtxt('data/mambo_02_long.csv', delimiter=',')
+mambo_03_data = np.genfromtxt('data/mambo_03_long.csv', delimiter=',')
 
 # desire = [[0.5,0,1],[-0.,0.75,1],[-0.,-0.75,1]]
 # jackal_data = np.genfromtxt('experiment/traj/run18/jackal.csv', delimiter=',')
@@ -33,7 +33,7 @@ for idx in range(len(jackal_data[0])):
     error[2][idx] = error3
 
 
-waypoints = [[-0.5,0.5], [0.8,-1.35], [2,0]]
+waypoints = [[-1.2,0.3], [0.0,1.6], [1.0,1.6], [1.7,0.1], [3,0]]
 ref_x = []
 ref_y = []
 epsilon = 0.01

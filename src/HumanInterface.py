@@ -5,11 +5,12 @@ import time
 sys.path.append(os.getcwd()+'/lib')
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import numpy as np
 
 
 class InputWaypoints(object):
 
-    def __init__(self, initial, final, space_limit, obs_position):
+    def __init__(self, initial, final, space_limit, obs_position, waypoints):
 
         self.initialState = initial
         self.finalState = final
@@ -18,6 +19,7 @@ class InputWaypoints(object):
         # the lab space limit [meter] in y-axis [y_min, y_max]
         self.space_limit_y = space_limit[1]
         self.obs_position = obs_position
+        self.waypoints = waypoints
 
 
     def run(self):
@@ -44,6 +46,9 @@ class InputWaypoints(object):
         self.ax.scatter(self.initialState[0], self.initialState[1], color='green')
         self.ax.scatter(self.finalState[0], self.finalState[1], color='violet')
 
+        for idx in range(len(self.waypoints)-1):
+            self.ax.scatter(self.waypoints[idx][0], self.waypoints[idx][1], color='red', marker='*')
+
         for idx in range(len(self.obs_position)):
             obs = patches.Rectangle((self.obs_position[idx][0], self.obs_position[idx][1]), self.obs_position[idx][2], self.obs_position[idx][3], 
                                         linewidth=1, edgecolor='black', facecolor='black')
@@ -51,9 +56,9 @@ class InputWaypoints(object):
         
 
         # set legends
-        colors = ["green", "violet", "red"]
-        marker_list = ["o", "o", "+"]
-        labels = ["start", "goal", "waypoints"]
+        colors = ["green", "violet", "red", "red"]
+        marker_list = ["o", "o", "*", "+"]
+        labels = ["Start", "Goal", "Current Waypoints", "New Waypoints"]
         def f(marker_type, color_type): return plt.plot([], [], marker=marker_type, color=color_type, ls="none")[0]
         handles = [f(marker_list[i], colors[i]) for i in range(len(labels))]
         # add legend about path
@@ -87,4 +92,63 @@ class InputWaypoints(object):
         plt.close()
 
         return waypoints_output
+
+if __name__ == '__main__':   
+    space_limit = [[-4,4],[-2,2]]
+    initial = [-3,0]
+    final = [3,0]
+    obs_size = 0.5
+    
+    waypoints = [[-0.7,0.5], [1.5,0.2], [3,0]]
+    timeIndex = [5,15,25]
+
+    obs_position = [[-1,-0.5,obs_size,obs_size], [0.3,-0.7,obs_size,obs_size], [0.2,0.50,obs_size,obs_size]]
+
+    
+    Input = InputWaypoints(initial, final, space_limit, obs_position, waypoints)
+    new_waypoints = Input.run()
+
+    print("Enter time index for new waypoints:")
+    newIndex = [int(x) for x in input().split()]
+    print(newIndex)
+    
+    for idx in range(len(newIndex)):
+        for jdx in range(len(timeIndex)):
+            if newIndex[idx] < timeIndex[jdx]:
+                timeIndex.insert(jdx, newIndex[idx])
+                waypoints.insert(jdx, new_waypoints[idx])
+                break
+
+    array_csv = waypoints[0]
+    for idx in range(len(waypoints)-1):
+        array_csv = np.vstack((array_csv, waypoints[idx+1]))
+    filename_csv = "src/waypoints.csv"
+    np.savetxt(filename_csv, array_csv, delimiter=",")
+    
+    print(waypoints)
+    while True:
+        Input = InputWaypoints(initial, final, space_limit, obs_position, waypoints)
+        new_waypoints = Input.run()
+        for idx in range(len(new_waypoints)-1):
+            waypoints.append(new_waypoints[idx])
+        
+        print("Enter time index for new waypoints:")
+        newIndex = [int(x) for x in input().split()]
+        print(newIndex)
+        
+        for idx in range(len(newIndex)):
+            for jdx in range(len(timeIndex)):
+                if newIndex[idx] < timeIndex[jdx]:
+                    timeIndex.insert(jdx, newIndex[idx])
+                    waypoints.insert(jdx, new_waypoints[idx])
+                    break
+
+        array_csv = waypoints[0]
+        for idx in range(len(waypoints)-1):
+            array_csv = np.vstack((array_csv, waypoints[idx+1]))
+        filename_csv = "src/waypoints.csv"
+        np.savetxt(filename_csv, array_csv, delimiter=",")
+
+
+
      

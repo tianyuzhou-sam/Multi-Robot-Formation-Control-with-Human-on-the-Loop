@@ -23,10 +23,10 @@ async def run_simulator():
     obs_position = [[-0.65-obs_size,-0.28-5*obs_size,obs_size,5*obs_size], [0.73,-0.60,obs_size,5*obs_size]]
 
     if simulationFlag:
-        jackal_data = np.genfromtxt('jackal.csv', delimiter=',')
-        mambo_01_data = np.genfromtxt('mambo_01.csv', delimiter=',')
-        mambo_02_data = np.genfromtxt('mambo_02.csv', delimiter=',')
-        mambo_03_data = np.genfromtxt('mambo_03.csv', delimiter=',')
+        jackal_data = np.genfromtxt('data/jackal.csv', delimiter=',')
+        mambo_01_data = np.genfromtxt('data/mambo_01.csv', delimiter=',')
+        mambo_02_data = np.genfromtxt('data/mambo_02.csv', delimiter=',')
+        mambo_03_data = np.genfromtxt('data/mambo_03.csv', delimiter=',')
         target_position = [-0.5,0.5, 0.8,-1.35, 2,0]
     else:
         jackal_data = np.genfromtxt('experiment/traj/run18/jackal.csv', delimiter=',')

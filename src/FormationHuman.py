@@ -17,7 +17,7 @@ from OptimalControlJackal import OptimalControlJackal
 from QuadSys import QuadSys
 from plot_traj import Simulator
 
-class FormationSim:
+class FormationHuman:
     configDict: dict  # a dictionary for parameters
     dimStates: int  # dimension of states
     dimInputs: int  # dimension of inputs
@@ -115,9 +115,9 @@ class FormationSim:
         P = np.matrix(scipy.linalg.solve_discrete_are(self.Ad, self.Bd, self.Q, self.R))
         self.K = np.matrix(np.matmul(scipy.linalg.inv(self.R + self.Bd.T*P*self.Bd),self.Bd.T)*P*self.Ad)
 
-        self.map_width_meter = 6
-        self.map_height_meter = 4
-        self.map_center = [0,0]
+        self.map_width_meter = 8
+        self.map_height_meter = 6
+        self.map_center = [0,0.5]
         self.resolution = 2
         self.value_non_obs = 0
         self.value_obs = 255
@@ -156,7 +156,15 @@ class FormationSim:
 
         
         self.runOnce = lambda stateNow, timeNow, target: self._runOC(self.x_Jackal, timeNow, target)
-        while (self.reached < self.numTargets) or timeNow <= self.maxTime:    
+        while (self.reached < self.numTargets) or timeNow <= self.maxTime:   
+            read_waypoints = np.genfromtxt('src/waypoints.csv', delimiter=',')
+
+            if not len(read_waypoints) == self.numTargets:
+                self.targets = read_waypoints
+                self.numTargets = len(read_waypoints)
+                self.target_position = self.targets[0]
+                for idx in range(len(self.targets)-1):
+                    self.target_position = np.hstack((self.target_position, self.targets[idx+1]))
 
             # solve
             if timeNow > self.hold:
@@ -183,6 +191,7 @@ class FormationSim:
                         target = self.targets[self.reached]
 
             agent_position = np.hstack((self.x_Jackal[0], self.x_Jackal[1]))
+            all_position_new = agent_position[0:2]
             quad_state = np.zeros((self.num_agents*self.Quad.dimStates+1))
             quad_state[0] = timeNow   
             for idx in range(self.num_agents):
@@ -197,7 +206,9 @@ class FormationSim:
                     quad_state[idx*self.Quad.dimStates+jdx+1] = newX[jdx]
 
                 agent_position = np.hstack((agent_position, self.x_Quad[idx][0:2]))
+                all_position_new = np.vstack((all_position_new, self.x_Quad[idx][0:2]))
                 
+            all_position = np.hstack((all_position, all_position_new))
 
             quad_state_list = np.vstack((quad_state_list, quad_state))
 

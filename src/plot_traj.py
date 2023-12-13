@@ -45,6 +45,12 @@ class Simulator:
         # create an empty map
         self.map_array = np.array([self.value_non_obs]*(self.map_width*self.map_height)).reshape(-1, self.map_width)
 
+        preTraj = np.genfromtxt('jackal_pre.csv', delimiter=',')
+        self.jackal_pre = []
+        for idx in range(len(preTraj[0])):
+            self.jackal_pre.append(preTraj[1][idx])
+            self.jackal_pre.append(preTraj[2][idx])
+
     def position_to_map_index(self, position: list):
         """
         Given the position in meter [px, py], return the index of the map associated with this position.
@@ -137,6 +143,7 @@ class Simulator:
         self.plot_targets(targets_position, text_offset, ax, target_text_flag)
         # plot paths
         self.plot_paths_figure(path_many_agents, agents_position, targets_position, ax)
+        ax.plot(self.jackal_pre[0::2], self.jackal_pre[1::2], color='red', linestyle='dashed')
         if obs_position is not None:
             for idx in range(len(obs_position)):
                 obs = patches.Rectangle((obs_position[idx][0], obs_position[idx][1]), obs_position[idx][2], obs_position[idx][3], 
@@ -200,9 +207,9 @@ class Simulator:
             else:
                 agent_color = "blue"
             ax.scatter(agents_position[2*idx_agent], agents_position[2*idx_agent+1], marker="o", color=agent_color)
-            if agent_text_flag:
-                ax.text(agents_position[2*idx_agent]+text_offset[0], agents_position[2*idx_agent+1]+text_offset[1],
-                        "A"+str(idx_agent), fontweight="bold", color=agent_color)
+            # if agent_text_flag:
+            #     ax.text(agents_position[2*idx_agent]+text_offset[0], agents_position[2*idx_agent+1]+text_offset[1],
+            #             "A"+str(idx_agent), fontweight="bold", color=agent_color)
             if idx_agent >= 1:
                 if idx_agent == 1:
                     start_idx = int(len(agents_position)/2) - 1
@@ -217,10 +224,10 @@ class Simulator:
         
         # if cluster_centers is empty, plot targets
         for idx_target in range(int(len(targets_position)/2)):
-            ax.scatter(targets_position[2*idx_target], targets_position[2*idx_target+1], s=100, marker="*", color="red")
-            if target_text_flag:
-                ax.text(targets_position[2*idx_target]+text_offset[0], targets_position[2*idx_target+1]+text_offset[1],
-                        "T"+str(idx_target), fontweight="bold", color="red")
+            ax.scatter(targets_position[2*idx_target], targets_position[2*idx_target+1], s=200, marker="*", color="red")
+            # if target_text_flag:
+            #     ax.text(targets_position[2*idx_target]+text_offset[0], targets_position[2*idx_target+1]+text_offset[1],
+            #             "T"+str(idx_target), fontweight="bold", color="red")
 
     def plot_paths_figure(self, path_many_agents: list, agents_position: list,
                           targets_position: list, ax):
@@ -241,7 +248,7 @@ class Simulator:
                         linewidth=2, color=agent_color, linestyle="solid")
                 
 
-    def figure_settings(self, ax, path_legend_flag: bool, legend_flag=True):
+    def figure_settings(self, ax, path_legend_flag: bool, legend_flag=False):
         """
         Settings for the figure.
 
@@ -249,11 +256,12 @@ class Simulator:
         """
         ax.set_xlabel("x (m)")
         ax.set_ylabel("y (m)")
-        ax.set_title("T = 25s", fontweight='bold')
+        # ax.set_title("T = 25s", fontweight='bold')
         ax.set_xlim([self.map_center[0]-self.map_width_meter/2, self.map_center[0]+self.map_width_meter/2])
         ax.set_ylim([self.map_center[1]-self.map_height_meter/2, self.map_center[1]+self.map_height_meter/2])
 
         # set legends
+        legend_flag = False
         if legend_flag:
             colors = ["red", "blue", "red"]
             marker_list = ["o", "o", "*"]
@@ -277,31 +285,38 @@ class Simulator:
 
 
 if __name__ == '__main__':
-    map_width_meter = 6
-    map_height_meter = 4
-    map_center = [0,0]
+    map_width_meter = 8
+    map_height_meter = 6
+    map_center = [0,0.5]
     resolution = 2
     value_non_obs = 0
     value_obs = 255
-    obs_size = 0.26
+    
 
     simulationFlag = True
 
     agent_position = [0,0, 0,0, 0,0, 0,0]
-    obs_position = [[-0.65-obs_size,-0.28-5*obs_size,obs_size,5*obs_size], [0.73,-0.60,obs_size,5*obs_size]]
-
+    
     if simulationFlag:
-        jackal_data = np.genfromtxt('jackal_1.csv', delimiter=',')
-        mambo_01_data = np.genfromtxt('mambo_01_1.csv', delimiter=',')
-        mambo_02_data = np.genfromtxt('mambo_02_1.csv', delimiter=',')
-        mambo_03_data = np.genfromtxt('mambo_03_1.csv', delimiter=',')
-        target_position = [-0.5,0.5, 0.8,-1.35, 2,0]
+        jackal_data = np.genfromtxt('data/jackal.csv', delimiter=',')
+        mambo_01_data = np.genfromtxt('data/mambo_01.csv', delimiter=',')
+        mambo_02_data = np.genfromtxt('data/mambo_02.csv', delimiter=',')
+        mambo_03_data = np.genfromtxt('data/mambo_03.csv', delimiter=',')
+        # target_position = [-1.2,0.3, 1.7,0.1, 3,0]
+        target_position = [-1.2,0.3, 0.0,1.6, 1.0,1.6, 1.7,0.1, 3,0]
+        obs_size = 0.5
+        obs_position = [[-1,-0.5,obs_size,obs_size], [0.3,-0.7,obs_size,obs_size], [0.2,0.50,obs_size,obs_size], 
+                [-2,1.5,obs_size,obs_size], [2,1.8,obs_size,obs_size]]
+
     else:
         jackal_data = np.genfromtxt('experiment/traj_records/jackal.csv', delimiter=',')
         mambo_01_data = np.genfromtxt('experiment/traj_records/mambo_01.csv', delimiter=',')
         mambo_02_data = np.genfromtxt('experiment/traj_records/mambo_02.csv', delimiter=',')
         mambo_03_data = np.genfromtxt('experiment/traj_records/mambo_03.csv', delimiter=',')
         target_position = [-0.5,0.25, 0.9,-1.3, 1.9,0.0]
+        obs_size = 0.26
+        obs_position = [[-0.65-obs_size,-0.28-5*obs_size,obs_size,5*obs_size], [0.73,-0.60,obs_size,5*obs_size]]
+
 
     jackal_position = []
     mambo_01_position = []
@@ -353,6 +368,7 @@ if __name__ == '__main__':
             mambo_02_position.append(mambo_02_data[2][idx])
             mambo_03_position.append(mambo_03_data[1][idx])
             mambo_03_position.append(mambo_03_data[2][idx])
+
 
     agent_position = []
     agent_position.append(jackal_position[-2])
