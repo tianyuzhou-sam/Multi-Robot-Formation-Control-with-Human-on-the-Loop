@@ -7,7 +7,7 @@ from HumanInterface import InputWaypoints
 
 if __name__ == '__main__':
 
-    space_limit = [[-4,4],[-2,2]]
+    space_limit = [[-4,4],[-2.5,3.5]]
     initial = [-3,0]
     final = [3,0]
     obs_size = 0.5

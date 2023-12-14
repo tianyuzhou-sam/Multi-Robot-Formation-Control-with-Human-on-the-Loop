@@ -45,7 +45,7 @@ class Simulator:
         # create an empty map
         self.map_array = np.array([self.value_non_obs]*(self.map_width*self.map_height)).reshape(-1, self.map_width)
 
-        preTraj = np.genfromtxt('jackal_pre.csv', delimiter=',')
+        preTraj = np.genfromtxt('data/jackal_pre.csv', delimiter=',')
         self.jackal_pre = []
         for idx in range(len(preTraj[0])):
             self.jackal_pre.append(preTraj[1][idx])

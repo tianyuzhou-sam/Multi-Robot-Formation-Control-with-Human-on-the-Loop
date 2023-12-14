@@ -11,28 +11,41 @@ sys.path.append(os.getcwd()+'/src')
 from plot_traj import Simulator
 
 async def run_simulator():
-    map_width_meter = 6
-    map_height_meter = 4
-    map_center = [0,0]
+    
     resolution = 2
     value_non_obs = 0
     value_obs = 255
-    obs_size = 0.26
 
     simulationFlag = False
-    obs_position = [[-0.65-obs_size,-0.28-5*obs_size,obs_size,5*obs_size], [0.73,-0.60,obs_size,5*obs_size]]
-
+    
     if simulationFlag:
-        jackal_data = np.genfromtxt('data/jackal.csv', delimiter=',')
-        mambo_01_data = np.genfromtxt('data/mambo_01.csv', delimiter=',')
-        mambo_02_data = np.genfromtxt('data/mambo_02.csv', delimiter=',')
-        mambo_03_data = np.genfromtxt('data/mambo_03.csv', delimiter=',')
-        target_position = [-0.5,0.5, 0.8,-1.35, 2,0]
+        map_width_meter = 8
+        map_height_meter = 6
+        map_center = [0,0.5]
+        # jackal_data = np.genfromtxt('data/jackal_pre.csv', delimiter=',')
+        # mambo_01_data = np.genfromtxt('data/mambo_01_pre.csv', delimiter=',')
+        # mambo_02_data = np.genfromtxt('data/mambo_02_pre.csv', delimiter=',')
+        # mambo_03_data = np.genfromtxt('data/mambo_03_pre.csv', delimiter=',')
+        # target_position = [-1.2,0.3, 1.7,0.1, 3,0]
+        jackal_data = np.genfromtxt('data/jackal_long.csv', delimiter=',')
+        mambo_01_data = np.genfromtxt('data/mambo_01_long.csv', delimiter=',')
+        mambo_02_data = np.genfromtxt('data/mambo_02_long.csv', delimiter=',')
+        mambo_03_data = np.genfromtxt('data/mambo_03_long.csv', delimiter=',')
+        target_position = [-1.2,0.3, 0.0,1.6, 1.0,1.6, 1.7,0.1, 3,0]
+        obs_size = 0.5
+        obs_position = [[-1,-0.5,obs_size,obs_size], [0.3,-0.7,obs_size,obs_size], [0.2,0.50,obs_size,obs_size], 
+                [-2,1.5,obs_size,obs_size], [2,1.8,obs_size,obs_size]]
+
     else:
-        jackal_data = np.genfromtxt('experiment/traj/run18/jackal.csv', delimiter=',')
-        mambo_01_data = np.genfromtxt('experiment/traj/run18/mambo_01.csv', delimiter=',')
-        mambo_02_data = np.genfromtxt('experiment/traj/run18/mambo_02.csv', delimiter=',')
-        mambo_03_data = np.genfromtxt('experiment/traj/run18/mambo_03.csv', delimiter=',')
+        map_width_meter = 6
+        map_height_meter = 4
+        map_center = [0,0]
+        jackal_data = np.genfromtxt('experiment/traj_records/jackal.csv', delimiter=',')
+        mambo_01_data = np.genfromtxt('experiment/traj_records/mambo_01.csv', delimiter=',')
+        mambo_02_data = np.genfromtxt('experiment/traj_records/mambo_02.csv', delimiter=',')
+        mambo_03_data = np.genfromtxt('experiment/traj_records/mambo_03.csv', delimiter=',')
+        obs_size = 0.26
+        obs_position = [[-0.65-obs_size,-0.28-5*obs_size,obs_size,5*obs_size], [0.73,-0.60,obs_size,5*obs_size]]
         target_position = [-0.5,0.25, 0.9,-1.3, 1.9,0.0]
 
     timeTraj = []
@@ -85,7 +98,7 @@ async def run_simulator():
         agent_position.append(mambo_03_position[idx*2+1])
         MySimulator.update_realtime_plot(all_position, agent_position, target_position, obs_position, ax, legend_flag=True)
 
-        time_str = jackal_data[0][idx]
+        time_str = "T = " + str(jackal_data[0][idx]) + "s"
         plt.text(0.25, 0.9, time_str, fontsize=14, transform=plt.gcf().transFigure)
         plt.pause(1E-6)
 
