@@ -98,8 +98,8 @@ async def run_simulator():
         agent_position.append(mambo_03_position[idx*2+1])
         MySimulator.update_realtime_plot(all_position, agent_position, target_position, obs_position, ax, legend_flag=True)
 
-        time_str = "T = " + str(jackal_data[0][idx]) + "s"
-        plt.text(0.25, 0.9, time_str, fontsize=14, transform=plt.gcf().transFigure)
+        # time_str = "T = " + str(jackal_data[0][idx]) + "s"
+        # plt.text(0.25, 0.9, time_str, fontsize=14, transform=plt.gcf().transFigure)
         plt.pause(1E-6)
 
         idx += 1

@@ -36,8 +36,10 @@ initial = iniJackal[0:2]
 final = [2,0]
 obs_size = 0.26
 obs_position = [[-0.65-obs_size,-0.28-5*obs_size,obs_size,5*obs_size], [0.73,-0.60,obs_size,5*obs_size]]
-Input = InputWaypoints(initial, final, space_limit, obs_position)
-waypoints = Input.run()
+
+# waypoints = [[3,0]]
+# Input = InputWaypoints(initial, final, space_limit, obs_position, waypoints)
+# waypoints = Input.run()
 waypoints = [[-0.5,0.5], [0.8,-1.35], [2,0]]
 MySim = FormationSim(configDict, waypoints, iniJackal, iniQuad, desire, obs_size, obs_position, t_change, buildFlag, saveFlag)
 asyncio.run(MySim.run())

@@ -20,7 +20,11 @@ if __name__ == '__main__':
     space_limit = [[-2.5,2.5],[-2,2]]
     initial = x0[0:2]
     final = [2,0]
-    humanInterface = InputWaypoints(initial, final, space_limit)
+    waypoints = [final]
+    obs_size = 0.26
+    obs_position = [[-0.65-obs_size,-0.28-5*obs_size,obs_size,5*obs_size], [0.73,-0.60,obs_size,5*obs_size]]
+
+    humanInterface = InputWaypoints(initial, final, space_limit, obs_position, waypoints)
     waypoints = humanInterface.run()
 
     T = 45

@@ -27,7 +27,12 @@ Ixx = 8.1 * 1e-3
 Iyy = 8.1 * 1e-3
 Izz = 14.2 * 1e-3
 
-MyQuad = QuadSys(configDict, g, m, Ixx, Iyy, Izz)
+MyQuad = QuadSys(configDict)
+g = MyQuad.g
+m = MyQuad.m
+Ix = MyQuad.Ix
+Iy = MyQuad.Iy
+Iz = MyQuad.Iz
 
 x0 = np.array([[0.],[0.0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]])
 

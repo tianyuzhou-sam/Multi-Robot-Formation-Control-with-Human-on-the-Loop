@@ -168,7 +168,7 @@ class Simulator:
         return ax
 
     def update_realtime_plot(self, path_many_agents: list, agents_position: list,
-                             targets_position: list, obs_position: list, ax, legend_flag=True):
+                             targets_position: list, obs_position: list, ax, legend_flag=False):
         """
         Update realtime plotting once in an existing figure. See input details in self.plot_paths()
         """

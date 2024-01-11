@@ -224,13 +224,13 @@ class FormationHuman:
 
             MySimulator.update_realtime_plot(all_position, agent_position, self.target_position, self.obs_position, ax, legend_flag=True)
 
-            time_str = 'T = ' + str(timeNow) + 's'
-            plt.text(0.25, 0.9, time_str, fontsize=14, transform=plt.gcf().transFigure)
+            # time_str = 'T = ' + str(timeNow) + 's'
+            # plt.text(0.25, 0.9, time_str, fontsize=14, transform=plt.gcf().transFigure)
             plt.pause(1E-6)
 
             idx += 1
 
-            await asyncio.sleep(self.dt)
+            await asyncio.sleep(self.dt/50)
 
             # fig1, ax1 = plt.subplots()
             # ax1.plot(self.x_Jackal[0], self.x_Jackal[1], marker = 'o')
@@ -297,18 +297,3 @@ class FormationHuman:
         uNow = uTrajNow[0, :]
         return ipoptTime, returnStatus, successFlag, algoTime, print_str, uNow
 
-if __name__ == '__main__':
-    # dictionary for configuration
-    # dt for Euler integration
-    configDict = {"dt": 0.1, "stepNumHorizon": 10, "startPointMethod": "zeroInput"}
-
-    buildFlag = True
-    saveFlag = False
-
-    targets = [[1,1],[2,1]]
-    iniJackal = [0,0,0]
-    iniQuad = [[0,0,0],[0,1,0],[0,-1,0]]
-    desire = [[-0.25,0.5,1],[-0.25,-0.5,1],[0.25,0,1]]
-
-    MySim = FormationSim(configDict, targets, iniJackal, iniQuad, desire, buildFlag, saveFlag)
-    MySim.run()
