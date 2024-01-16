@@ -1,4 +1,5 @@
 # Multi-Robot-Formation-Control-with-Human-on-the-Loop
+Click for the video demonstration.
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/-3WkRDwjgGo/0.jpg)](https://youtu.be/-3WkRDwjgGo)
 
