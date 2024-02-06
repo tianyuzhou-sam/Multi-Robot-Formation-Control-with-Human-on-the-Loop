@@ -26,14 +26,14 @@ from geometry_msgs.msg import Twist
 class ModelPredictiveControlOnLoop:
     configDict: dict  # a dictionary for parameters
 
-    def __init__(self, configDict: dict, buildFlag=True, targets=[[0,0]], saveFlag=False, config_file_name='config/config_jackal.json'):
+    def __init__(self, configDict: dict, buildFlag=True, waypoints=[[0,0]], saveFlag=False, config_file_name='config/config_jackal.json'):
         self.configDict = configDict
         self.dt = self.configDict['dt']
         self.saveFlag = saveFlag
 
         # initialize JackalSys
         self.MyJackalSys = JackalSys(configDict, buildFlag)
-        self.targets = targets
+        self.waypoints = waypoints
         self.offset = 0.1
         # initialize OptimalControlProblem
         self.MyJackalOc = OptimalControlJackal(configDict, self.MyJackalSys, buildFlag)
@@ -47,8 +47,8 @@ class ModelPredictiveControlOnLoop:
             self.methodStr = "MPC"
 
         
-        self.numTargets = len(self.targets)
-        self.offset = 0.1
+        self.numWaypoints = len(self.waypoints)
+        self.offset = 0.025
 
         # Read the configuration from the json file
         self.json_file = open(config_file_name)
@@ -93,11 +93,12 @@ class ModelPredictiveControlOnLoop:
         # the one we want to access
         wanted_body = self.config_data["QUALISYS"]["NAME_SINGLE_BODY"]
         
+        self.time_name = time.strftime("%Y%m%d%H%M%S")
         self.t_start = time.time()
         self.timeNow = time.time() - self.t_start  # [sec]
         self.stateNow = copy.deepcopy(iniState)
         self.idx = 0
-        self.target = self.targets[0]
+        self.waypoint = self.waypoints[0]
         self.reached = 0
 
         # initialize trajectories for states, inputs, etc.
@@ -117,7 +118,7 @@ class ModelPredictiveControlOnLoop:
 
         # load function to run optimization once
         if self.methodStr == "MPC":
-            self.runOnce = lambda stateNow, timeNow, target: self._runOC(self.stateNow, self.timeNow, self.target)
+            self.runOnce = lambda stateNow, timeNow, waypoint: self._runOC(self.stateNow, self.timeNow, self.waypoint)
         else:
             raise Exception("Wrong method in configDict!")
 
@@ -160,19 +161,13 @@ class ModelPredictiveControlOnLoop:
             # print("yaw")
             # print(yaw_now)
             # print(math.degrees(yaw_now))
-            # print((xy[0] - self.target[0])**2 + (xy[1] - self.target[1])**2)
-            if (self.reached < self.numTargets):  
-                read_waypoints = np.genfromtxt('src/waypoints.csv', delimiter=',')
-
-                if not len(read_waypoints) == self.numTargets:
-                    self.targets = read_waypoints
-                    self.numTargets = len(read_waypoints)
-                    self.target_position = self.targets[0]
-                    for idx in range(len(self.targets)-1):
-                        self.target_position = np.hstack((self.target_position, self.targets[idx+1]))             
+            # print((xy[0] - self.waypoint[0])**2 + (xy[1] - self.waypoint[1])**2)
+            if (self.reached < self.numWaypoints):               
                 # solve
-                ipoptTime, returnStatus, successFlag, algoTime, print_str, uNow = self.runOnce(self.stateNow, self.timeNow, self.target)
+                ipoptTime, returnStatus, successFlag, algoTime, print_str, uNow = self.runOnce(self.stateNow, self.timeNow, self.waypoint)
+                read_waypoints = np.genfromtxt('experiment/waypoints.csv', delimiter=',')
 
+                
                 # apply control and forward propagate dynamics
                 # xNext = self.MyJackalSys.discDynFun(self.stateNow, uNow)
                 xNext = [xy[0], xy[1], yaw_now]
@@ -205,13 +200,19 @@ class ModelPredictiveControlOnLoop:
                 self.timeTraj = np.append(self.timeTraj, self.timeNow)
 
 
-                if ((self.stateNow[0]-self.targets[self.reached][0])**2+(self.stateNow[1]-self.targets[self.reached][1])**2 <= self.offset**2):
+                if ((self.stateNow[0]-self.waypoints[self.reached][0])**2+(self.stateNow[1]-self.waypoints[self.reached][1])**2 <= self.offset**2):
                     self.reached += 1
-                    print("reached target")
+                    print("reached waypoint")
                     print(self.reached)
-                    print(self.target)
-                    if self.reached < self.numTargets:
-                        self.target = self.targets[self.reached]
+                    print(self.waypoint)
+                    if not len(read_waypoints) == self.numWaypoints:
+                        self.waypoints = read_waypoints
+                        self.numWaypointss = len(read_waypoints)
+                        self.waypoint_position = self.waypoints[0]
+                        for idx in range(len(self.waypoints)-1):
+                            self.waypoint_position = np.hstack((self.waypoint_position, self.waypoints[idx+1])) 
+                    if self.reached < self.numWaypoints:
+                        self.waypoint = self.waypoints[self.reached]
 
                 # print(print_str)
                 
@@ -232,7 +233,7 @@ class ModelPredictiveControlOnLoop:
                             "logStrTraj": self.logStrTraj}
 
                 if self.saveFlag:
-                    with open('controlData.csv', 'w') as file:
+                    with open('experiment/traj/' + self.time_name + '.csv', 'w') as file:
                         writer = csv.writer(file)
                         print(self.timeTraj)
                         writer.writerow(self.timeTraj)
@@ -249,9 +250,9 @@ class ModelPredictiveControlOnLoop:
         # Reference: https://qualisys.github.io/qualisys_python_sdk/index.html
         await connection.stream_frames(components=["6d"], on_packet=on_packet)
 
-    def _runOC(self, stateNow, timeNow, target):
+    def _runOC(self, stateNow, timeNow, waypoint):
         t0 = time.time()
-        xTrajNow, uTrajNow, timeTrajNow, ipoptTime, returnStatus, successFlag = self.MyJackalOc.solve(stateNow, timeNow, target)
+        xTrajNow, uTrajNow, timeTrajNow, ipoptTime, returnStatus, successFlag = self.MyJackalOc.solve(stateNow, timeNow, waypoint)
         t1 = time.time()
         algoTime = t1 - t0
         print_str = "Sim time [sec]: " + str(round(timeNow, 1)) + "   Comp. time [sec]: " + str(round(algoTime, 3))
@@ -317,27 +318,4 @@ class ModelPredictiveControlOnLoop:
         plt.tight_layout()
         plt.show(block=blockFlag)
 
-
-if __name__ == '__main__':
-    # dictionary for configuration
-    # dt for Euler integration
-    configDict = {"dt": 0.1, "stepNumHorizon": 5, "startPointMethod": "zeroInput"}
-    config_file_name = 'config/config_jackal.json'
-
-    buildFlag = True
-    saveFlag = False
-
-    
-
-    x0 = np.array([0, 0, 0])
-    u0 = np.array([0, 0])
-    T = 20
-    targets = [[-0.,0.], [1,-0.5], [2,0]]
-
-    # initialize MPC
-    MyMPC = ModelPredictiveControlOnLoop(configDict, buildFlag, targets, saveFlag, config_file_name)
-
-    # Run our asynchronous main function forever
-    asyncio.ensure_future(MyMPC.run(x0, T))
-    asyncio.get_event_loop().run_forever()
 
