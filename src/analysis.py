@@ -14,7 +14,7 @@ mambo_03_data = np.genfromtxt('data/mambo_03_long.csv', delimiter=',')
 # mambo_02_data = np.genfromtxt('experiment/traj/run18/mambo_02.csv', delimiter=',')
 # mambo_03_data = np.genfromtxt('experiment/traj/run18/mambo_03.csv', delimiter=',')
 
-target_position = [-0.5,0.5, 0.8,-1.35, 2,0]
+target_position = [-1.2,0.3, 0.0,1.6, 1.0,1.6, 1.7,0.1, 3,0]
 
 ref = np.zeros((9, len(jackal_data[0])))
 for idx_agent in range(3):

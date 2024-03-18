@@ -29,7 +29,7 @@ obs_position = [[-1,-0.5,obs_size,obs_size], [0.3,-0.7,obs_size,obs_size], [0.2,
                 [-2,1.5,obs_size,obs_size], [2,1.8,obs_size,obs_size]]
 
 waypoints = [[-0.7,0.5], [1.5,0.2], [3,0]]
-# waypoints = [[-1.2,0.3], [0.0,1.6], [1.0,1.6], [1.7,0.1], [3,0]]
+waypoints = [[-1.2,0.3], [0.0,1.6], [1.0,1.6], [1.7,0.1], [3,0]]
 
 array_csv = waypoints[0]
 for idx in range(len(waypoints)-1):

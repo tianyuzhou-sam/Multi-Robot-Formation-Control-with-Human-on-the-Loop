@@ -17,7 +17,7 @@ from OptimalControlJackal import OptimalControlJackal
 from QuadSys import QuadSys
 from plot_traj import Simulator
 
-class FormationHuman:
+class FormationSim:
     configDict: dict  # a dictionary for parameters
     dimStates: int  # dimension of states
     dimInputs: int  # dimension of inputs
@@ -35,7 +35,7 @@ class FormationHuman:
         self.dt = configDict['dt']
         self.MyJackalSys = JackalSys(configDict, buildFlag)
         self.Jackal = OptimalControlJackal(configDict, self.MyJackalSys, buildFlag)
-        self.maxTime = 40
+        self.maxTime = 0
 
         self.noiseAmp = 0.1
 
@@ -56,10 +56,12 @@ class FormationHuman:
         self.x_Jackal = iniJackal
 
         self.x_Quad = np.zeros((self.num_agents, self.Quad.dimStates))
-        for idx in range(self.num_agents):
+        for idx in range(self.num_agents-1):
             self.x_Quad[idx][0] = iniQuad[idx][0]
             self.x_Quad[idx][1] = iniQuad[idx][1]
             self.x_Quad[idx][2] = iniQuad[idx][2]
+        self.x_Quad[2][0] = 0
+        self.x_Quad[2][1] = 0
 
         self.t_change = t_change
         self.nextChange = self.t_change
@@ -110,14 +112,25 @@ class FormationHuman:
 
         self.Q = np.eye(self.Quad.dimStates)*10
         self.R = np.eye(self.Quad.dimInputs)*1
+
+        self.A2 = np.array([[0,0,1,0],[0,0,0,1],[0,0,-0.1,0],[0,0,0,-0.1]])
+        self.B2 = np.array([[0,0],[0,0],[1,0],[0,1]])
+        self.Q2 = np.eye(4)*1
+        self.Q2[0][0]=100
+        self.Q2[1][1]=100
+        self.R2 = np.eye(2)
+        # P2 = np.matrix(scipy.linalg.solve_discrete_are(self.A2, self.B2, self.Q2, self.R2))
+        # self.K2 = np.matrix(np.matmul(scipy.linalg.inv(self.R2 + self.B2.T*P2*self.B2),self.B2.T)*P2*self.A2)
+        P2 = np.matrix(scipy.linalg.solve_continuous_are(self.A2, self.B2, self.Q2, self.R2))
+        self.K2 = np.matrix(scipy.linalg.inv(self.R2)*(self.B2.T*P2))
         
         
         P = np.matrix(scipy.linalg.solve_discrete_are(self.Ad, self.Bd, self.Q, self.R))
         self.K = np.matrix(np.matmul(scipy.linalg.inv(self.R + self.Bd.T*P*self.Bd),self.Bd.T)*P*self.Ad)
 
-        self.map_width_meter = 8
-        self.map_height_meter = 6
-        self.map_center = [0,0.5]
+        self.map_width_meter = 6
+        self.map_height_meter = 4
+        self.map_center = [0,0]
         self.resolution = 2
         self.value_non_obs = 0
         self.value_obs = 255
@@ -156,15 +169,7 @@ class FormationHuman:
 
         
         self.runOnce = lambda stateNow, timeNow, target: self._runOC(self.x_Jackal, timeNow, target)
-        while (self.reached < self.numTargets) or timeNow <= self.maxTime:   
-            read_waypoints = np.genfromtxt('src/waypoints.csv', delimiter=',')
-
-            if not len(read_waypoints) == self.numTargets:
-                self.targets = read_waypoints
-                self.numTargets = len(read_waypoints)
-                self.target_position = self.targets[0]
-                for idx in range(len(self.targets)-1):
-                    self.target_position = np.hstack((self.target_position, self.targets[idx+1]))
+        while (self.reached < self.numTargets) or timeNow <= self.maxTime:    
 
             # solve
             if timeNow > self.hold:
@@ -191,10 +196,9 @@ class FormationHuman:
                         target = self.targets[self.reached]
 
             agent_position = np.hstack((self.x_Jackal[0], self.x_Jackal[1]))
-            all_position_new = agent_position[0:2]
             quad_state = np.zeros((self.num_agents*self.Quad.dimStates+1))
             quad_state[0] = timeNow   
-            for idx in range(self.num_agents):
+            for idx in range(self.num_agents-1):
                 u = -np.matmul(self.K, self.x_Quad[idx] - self.z[idx] - JackalObserved)
                 u = u.tolist()[0]
 
@@ -206,9 +210,24 @@ class FormationHuman:
                     quad_state[idx*self.Quad.dimStates+jdx+1] = newX[jdx]
 
                 agent_position = np.hstack((agent_position, self.x_Quad[idx][0:2]))
-                all_position_new = np.vstack((all_position_new, self.x_Quad[idx][0:2]))
-                
-            all_position = np.hstack((all_position, all_position_new))
+
+            z3 = [self.z[2][0], self.z[2][1], 0, 0]
+            
+            u = -np.matmul(self.K2, self.x_Quad[2][0:4] - z3 - JackalObserved[0:4])
+            print(u)
+            u = u.tolist()[0]
+            dx = np.matmul(self.A2, self.x_Quad[2][0:4]) + np.matmul(self.B2, u)
+            newX = self.x_Quad[2][0:4] + dx*self.dt
+
+            for jdx in range(self.Quad.dimStates):
+                if jdx < 4:
+                    self.x_Quad[2][jdx] = newX[jdx]
+                    quad_state[2*self.Quad.dimStates+jdx+1] = newX[jdx]
+                else:
+                    self.x_Quad[2][jdx] = 0
+                    quad_state[2*self.Quad.dimStates+jdx+1] = 0
+
+            agent_position = np.hstack((agent_position, self.x_Quad[2][0:2]))
 
             quad_state_list = np.vstack((quad_state_list, quad_state))
 
@@ -230,7 +249,7 @@ class FormationHuman:
 
             idx += 1
 
-            await asyncio.sleep(self.dt/50)
+            await asyncio.sleep(self.dt)
 
             # fig1, ax1 = plt.subplots()
             # ax1.plot(self.x_Jackal[0], self.x_Jackal[1], marker = 'o')
@@ -251,13 +270,13 @@ class FormationHuman:
                 array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.Quad.dimStates+1]))
                 array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.Quad.dimStates+2]))
                 array_csv = np.vstack((array_csv, quad_state_list[:,idx*self.Quad.dimStates+3]))
-                filename_csv = os.path.expanduser("~") + "/github/Multi-Robot-Formation-Control-with-Human-on-the-Loop/mambo_0" + str(idx+1) + ".csv"
+                filename_csv = os.path.expanduser("~") + "/github/Multi-agent-Formation-Control-With-Human-Guidance/mambo_0" + str(idx+1) + ".csv"
                 np.savetxt(filename_csv, array_csv, delimiter=",")
             
             array_csv = quad_state_list[:,0]
             array_csv = np.vstack((array_csv, leader_state_list[:,0]))
             array_csv = np.vstack((array_csv, leader_state_list[:,1]))
-            filename_csv = os.path.expanduser("~") + "/github/Multi-Robot-Formation-Control-with-Human-on-the-Loop/jackal.csv"
+            filename_csv = os.path.expanduser("~") + "/github/Multi-agent-Formation-Control-With-Human-Guidance/jackal.csv"
             np.savetxt(filename_csv, array_csv, delimiter=",")
 
             
