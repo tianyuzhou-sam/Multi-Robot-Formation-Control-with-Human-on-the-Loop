@@ -26,13 +26,18 @@ Make build directory
 $ cd <MAIN_DIRECTORY>
 $ mkdir build
 ```
-Initialize the pre-generated waypoints and time-indices, see test/test_onloopUI for details
+Initialize the pre-generated waypoints and time-indices, see test/test_onloopUI for details. 
+
+To run the simulator:
 ```
 $ python3 test/test_human_on_loop.py
+```
+To run human interface:
+```
 $ python3 test/test_onLoopUI.py
 ```
 
-Input the waypoints in the UI window and the time-indices in te terminal window (timeindex1 timeindex2, ...).
+Input the waypoints in the UI window and the time-indices in te terminal window. If multiple waypoints are selected at the same time, saperate the time indices by space (timeindex1 timeindex2 ...). The window will always open for additional waypoints.
 
 ![Alt text](/images/UI.png?raw=true "Optional Title")
 
@@ -69,8 +74,12 @@ $ python3 scripts_aimslab/run_mambo.py 3
 $ cd <MAIN_DIRECTORY>
 $ python3 experiment/run_Formation.py
 ```
+* Run MPC controller (no human interface UI)
+```
+$ python3 experiment/run_MPC.py
+```
 * Run MPC controller and Human interaction UI On Jackal
 ```
-python3 experiment/run_MPC_on_Loop.py
+$ python3 experiment/run_MPC_on_Loop.py
 $ python3 test/test_onLoopUI.py
 ```
