@@ -19,29 +19,29 @@ The experiment uses one [Clearpath Jackal](https://clearpathrobotics.com/jackal-
 * [Mambo-Tracking-Interface](https://github.com/tianyuzhou-sam/Mambo-Tracking-Interface)
 For reference Jackal
 
-Test
+Simulation
 ============
 Make build directory
 ```
 $ cd <MAIN_DIRECTORY>
 $ mkdir build
 ```
-Initialize the pre-generated waypoints and time-indices, see test/test_onloopUI for details. 
+Initialize the pre-generated waypoints and time indices, see test/test_onloopUI for details. 
 
 To run the simulator:
 ```
 $ python3 test/test_human_on_loop.py
 ```
-To run human interface:
+To run the human interface:
 ```
 $ python3 test/test_onLoopUI.py
 ```
 
-Input the waypoints in the UI window and the time-indices in te terminal window. If multiple waypoints are selected at the same time, saperate the time indices by space (timeindex1 timeindex2 ...). The window will always open for additional waypoints.
+Input the waypoints in the UI window and the time indices in the terminal window. If multiple waypoints are selected at the same time, separate the time indices by space (timeindex1 timeindex2 ...). The window will always open for additional waypoints.
 
 ![Alt text](/images/UI.png?raw=true "Optional Title")
 
-An example of simulation is following. The dased red line indicates the original planned path, the solid red line indicates the updated path after the guidance is given.
+An example of simulation is the following. The dashed red line indicates the original planned path, and the solid red line indicates the updated path after the guidance is given.
 
 ![Alt text](/images/3DFigure.png?raw=true "Optional Title")
 
